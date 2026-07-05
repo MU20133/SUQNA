@@ -6,8 +6,12 @@ The app runs locally (`node server.js` or PM2 on port 3000) and is exposed
 publicly through a free Cloudflare quick tunnel:
 
 ```
-cloudflared tunnel --url http://localhost:3000
+cloudflared tunnel --url http://localhost:3000 --protocol http2
 ```
+
+(`--protocol http2` matters on this network: the default QUIC/UDP transport
+only gets 1 of 4 connections up and requests flap with "Origin DNS error";
+HTTP/2 over TCP is stable.)
 
 - The command prints a fresh `https://<random>.trycloudflare.com` URL each run.
 - Works as long as this PC is on and the tunnel process is running.
