@@ -114,14 +114,23 @@ router.put('/ads/:id/status', async (req, res) => {
     if (!ad) return res.status(404).json({ error: 'Ad not found' });
 
     dbs.runSync('UPDATE ads SET status = ? WHERE id = ?', [status, ad.id]);
+    let confCode = ad.conf_code || null;
     if (status === 'approved') {
       const fee = dbs.getSync("SELECT value FROM admin_settings WHERE key = 'ad_publishing'");
       if (fee) {
         dbs.runSync('INSERT INTO revenue (amount, type, date) VALUES (?, ?, ?)', [parseInt(fee.value), 'ad_publishing', Date.now()]);
       }
+      // Spec item 3: once the admin's check completes, a confirmation code is
+      // issued and shown directly on the advertiser's page.
+      if (!confCode) {
+        confCode = String(Math.floor(100000 + Math.random() * 900000));
+        dbs.runSync('UPDATE ads SET conf_code = ?, pay_status = ? WHERE id = ?', [confCode, 'success', ad.id]);
+        dbs.runSync('INSERT INTO codes (code, role, user, used, ad_id, auto) VALUES (?, ?, ?, 0, ?, 1)',
+          [confCode, 'ad', ad.owner || ad.seller, ad.id]);
+      }
     }
     dbs.saveDb();
-    res.json({ status });
+    res.json({ status, conf_code: confCode });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -245,7 +245,7 @@ function seed() {
   const admin = getSync('SELECT id FROM users WHERE name = ? AND role = ?', ['admin', 'admin']);
   if (!admin) {
     const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync('admin123', salt);
+    const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', salt);
     runSync(`INSERT INTO users (name, role, password_hash, salt, joined, status)
       VALUES (?, ?, ?, ?, ?, ?)`, ['admin', 'admin', hash, salt, Date.now(), 'active']);
   }
@@ -253,11 +253,11 @@ function seed() {
   const promoCount = getSync('SELECT COUNT(*) as c FROM promos');
   if (promoCount.c === 0) {
     const offers = [
-      '✈️ Book Flights at Exclusive Prices',
-      '🏨 Luxury Hotels & Resorts',
-      '🌍 Amazing Holiday Packages',
-      '🎁 Limited-Time Discounts',
-      '⭐ VIP Travel Deals'
+      '🛒 Welcome to Souq خفض لى — buy & sell across Sudan',
+      '📢 Post your first ad today — quick admin review',
+      '⭐ Featured ads reach thousands of buyers',
+      '🏪 Open your merchant store on Souq',
+      '💰 Negotiate directly with sellers in-app'
     ];
     for (const t of offers) runSync('INSERT INTO promos (text) VALUES (?)', [t]);
   }

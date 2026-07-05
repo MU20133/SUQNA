@@ -5,6 +5,7 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1);   // correct client IPs for rate-limit behind tunnel/Caddy
 const PORT = process.env.PORT || 3000;
 
 const limiter = rateLimit({

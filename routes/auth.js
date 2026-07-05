@@ -61,24 +61,45 @@ router.post('/login', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// WhatsApp rule (spec): ONLY +<12 digits>, 00<12 digits> or 00<14 digits>.
+function validWa(wa) {
+  const d = String(wa).replace(/[\s\-()]/g, '');
+  return /^\+\d{12}$/.test(d) || /^00\d{12}$/.test(d) || /^00\d{14}$/.test(d);
+}
+const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e));
+
 router.post('/register', async (req, res) => {
   try {
     const { name, password, email, wa, city, dept, role } = req.body;
     if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
+    if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    // Contact: WhatsApp number or email is required, and must be valid.
+    if (!wa && !email) return res.status(400).json({ error: 'WhatsApp number or email required' });
+    if (wa && !validWa(wa)) return res.status(400).json({ error: 'Error in the WhatsApp number' });
+    if (email && !validEmail(email)) return res.status(400).json({ error: 'Invalid email address' });
+
+    // Role whitelist — 'admin' can never be self-assigned.
+    const roleMap = { buyer: 'buyer', seller: 'seller', merchant: 'merchant_app' };
+    const safeRole = roleMap[role] || 'buyer';
 
     const { getSync, runSync, lastId, saveDb } = await getDb();
     const existing = getSync('SELECT id FROM users WHERE name = ?', [name]);
     if (existing) return res.status(409).json({ error: 'Username already taken' });
+    const waNorm = wa ? String(wa).replace(/[\s\-()]/g, '') : '';
+    if (waNorm && getSync('SELECT id FROM users WHERE wa = ?', [waNorm]))
+      return res.status(409).json({ error: 'That WhatsApp number is already registered' });
+    if (email && getSync('SELECT id FROM users WHERE email = ? AND email != ?', [String(email).toLowerCase(), '']))
+      return res.status(409).json({ error: 'That email is already registered' });
 
     const salt = bcrypt.genSaltSync(12);
     const password_hash = bcrypt.hashSync(password, salt);
     const joined = Date.now();
 
-    runSync(`INSERT INTO users (name, email, wa, city, dept, role, password_hash, salt, joined)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-        name, email || '', wa || '', city || '', dept || '',
-        role === 'merchant' ? 'merchant_app' : 'buyer',
-        password_hash, salt, joined
+    runSync(`INSERT INTO users (name, email, wa, city, dept, role, password_hash, salt, joined, contact_verified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        name, email ? String(email).toLowerCase() : '', waNorm, city || '', dept || '',
+        safeRole, password_hash, salt, joined, waNorm ? 'wa' : 'email'
     ]);
     saveDb();
 

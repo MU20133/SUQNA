@@ -54,8 +54,9 @@ router.post('/on/:adId', async (req, res) => {
     if (existing) return res.json(existing);
 
     dbs.runSync('INSERT INTO inquiries (ad_id, ad_title, seller, buyer) VALUES (?, ?, ?, ?)', [ad.id, ad.title, ad.seller, req.user.name]);
+    const newId = dbs.lastId();   // must read before saveDb(): export resets last_insert_rowid
     dbs.saveDb();
-    const inquiry = { id: dbs.lastId(), ad_id: ad.id, ad_title: ad.title, seller: ad.seller, buyer: req.user.name };
+    const inquiry = { id: newId, ad_id: ad.id, ad_title: ad.title, seller: ad.seller, buyer: req.user.name };
     res.status(201).json(inquiry);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -65,6 +66,9 @@ router.post('/:id/messages', async (req, res) => {
     const dbs = await getDb();
     const inquiry = dbs.getSync('SELECT * FROM inquiries WHERE id = ?', [req.params.id]);
     if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
+    if (req.user.name !== inquiry.buyer && req.user.name !== inquiry.seller && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not a participant in this inquiry' });
+    }
 
     const { body } = req.body;
     if (!body || !body.trim()) return res.status(400).json({ error: 'Message body required' });

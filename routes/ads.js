@@ -45,11 +45,15 @@ router.get('/', async (req, res) => {
     const where = [];
     const params = [];
 
-    if (!user || user.role !== 'admin') {
+    const isOwnerQuery = user && seller && seller === user.name;
+    if (user && user.role === 'admin') {
+      if (status) { where.push('a.status = ?'); params.push(status); }
+    } else if (isOwnerQuery) {
+      // Owners see ALL their own ads (pending/rejected included) so the
+      // account page can show review status and the ad confirmation code.
+      if (status) { where.push('a.status = ?'); params.push(status); }
+    } else {
       where.push("a.status = 'approved'");
-    } else if (status) {
-      where.push('a.status = ?');
-      params.push(status);
     }
 
     if (cat) { where.push('a.cat = ?'); params.push(cat); }
