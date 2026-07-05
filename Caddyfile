@@ -1,0 +1,25 @@
+yourdomain.com {
+    # TLS is automatic via Let's Encrypt
+    reverse_proxy localhost:3000
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Rate limiting
+    rate_limit {
+        zone dynamic {
+            key {remote_host}
+            events 200
+            window 15m
+        }
+    }
+
+    log {
+        output file logs/caddy-access.log
+    }
+}
