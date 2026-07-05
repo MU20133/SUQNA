@@ -242,12 +242,19 @@ function seed() {
     }
   }
 
-  const admin = getSync('SELECT id FROM users WHERE name = ? AND role = ?', ['admin', 'admin']);
+  const admin = getSync('SELECT id, password_hash FROM users WHERE name = ? AND role = ?', ['admin', 'admin']);
+  const adminPw = process.env.ADMIN_PASSWORD || 'admin123';
   if (!admin) {
     const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', salt);
+    const hash = bcrypt.hashSync(adminPw, salt);
     runSync(`INSERT INTO users (name, role, password_hash, salt, joined, status)
       VALUES (?, ?, ?, ?, ?, ?)`, ['admin', 'admin', hash, salt, Date.now(), 'active']);
+  } else if (!bcrypt.compareSync(adminPw, admin.password_hash)) {
+    // .env is the source of truth: sync the admin password on every startup
+    // so editing ADMIN_PASSWORD + restart is all it takes to change it.
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(adminPw, salt);
+    runSync('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?', [hash, salt, admin.id]);
   }
 
   const promoCount = getSync('SELECT COUNT(*) as c FROM promos');
