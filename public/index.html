@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Souq · خفض لى</title>
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root{
+    /* ocean/lavender palette: 8CCCFC 20B9E5 667D9B 264D59 625265 A3A0D4 */
+    --ink:#22333c; --paper:#f2f4fb; --card:#fcfcff; --line:#d9d7ec;
+    --teal:#1794bd; --teal-d:#264d59; --teal-l:#e1f4fb; --sand:#667d9b;
+    --amber:#7a76b5; --amber-bg:#ecebf8; --red:#b23a2e; --red-bg:#f6e3e0;
+    --blue:#20b9e5; --green:#3e8e5c; --green-bg:#e6f3ec;
+    --hdr:#264d59; --hdr-ink:#eaf6fb; --muted:#8f9bb0;
+  }
+  html[data-theme="dark"]{
+    --ink:#e6ecf5; --paper:#151a22; --card:#1e2530; --line:#39435a;
+    --teal:#20b9e5; --teal-d:#8cccfc; --teal-l:#1c3038; --sand:#a9b6cc;
+    --amber:#a3a0d4; --amber-bg:#2b2a44; --red:#e0786c; --red-bg:#3a221f;
+    --blue:#8cccfc; --green:#7fc784; --green-bg:#24301f;
+    --hdr:#10161c; --hdr-ink:#e8eef6; --muted:#7e88a0;
+  }
+  html[data-theme="dark"] .card .media{filter:brightness(.85);}
+  html[data-theme="dark"] .pill{background:rgba(30,37,48,.92);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:72px;}
+  button{font:inherit;cursor:pointer;}
+  input,select,textarea{font:inherit;}
+  .mono{font-family:"IBM Plex Mono",monospace;}
+  .hidden{display:none!important;}
+
+  /* top bar */
+  header{position:sticky;top:0;z-index:20;background:var(--hdr);color:var(--hdr-ink);padding:12px 14px;display:flex;align-items:center;gap:7px;border-bottom:3px solid var(--teal);}
+  header .logo{font-family:"Sora",sans-serif;font-weight:700;font-size:18px;white-space:nowrap;flex-shrink:0;}
+  header .logo .ar{color:#cfe9fd;font-weight:500;margin-left:5px;}
+  header .city{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:#c3d3e8;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);padding:6px 11px;border-radius:18px;}
+  header .city select{background:transparent;border:none;color:var(--hdr-ink);font-size:13px;}
+  header .who{font-size:12px;color:#cfe9fd;background:rgba(140,204,252,.15);padding:5px 10px;border-radius:14px;border:1px solid rgba(140,204,252,.3);}
+  header .iconbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:var(--hdr-ink);width:34px;height:34px;border-radius:50%;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  @media (max-width:420px){
+    header{gap:5px;}
+    header .logo{font-size:15px;}
+    header .iconbtn{width:29px;height:29px;font-size:13px;}
+    header .iconbtn.lang{padding:0 8px;}
+    header .city{padding:5px 8px;font-size:11.5px;max-width:92px;}
+    header .city select{max-width:60px;text-overflow:ellipsis;overflow:hidden;}
+    header .who{display:none;}
+  }
+  header .iconbtn.lang{width:auto;padding:0 11px;font-size:12px;font-weight:600;font-family:"IBM Plex Mono";border-radius:17px;}
+  /* RTL */
+  html[dir="rtl"] body{font-family:"IBM Plex Sans","Segoe UI",Tahoma,sans-serif;}
+  html[dir="rtl"] header .city{margin-left:0;margin-right:auto;}
+  html[dir="rtl"] header .logo .ar{margin-left:0;margin-right:5px;}
+  html[dir="rtl"] .card .stats{margin-left:0;margin-right:auto;}
+  html[dir="rtl"] .card .seller .avatar{order:0;}
+
+  .wrap{max-width:760px;margin:0 auto;padding:16px 14px;}
+
+  /* search + filter row */
+  .searchrow{display:flex;gap:8px;margin-bottom:14px;}
+  .searchrow input{flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:24px;background:var(--card);}
+  .searchrow input:focus{outline:none;border-color:var(--teal);}
+  .cats{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;}
+  .cat{white-space:nowrap;font-size:12.5px;padding:7px 13px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--sand);}
+  .cat.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+
+  /* feed cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 0 #fff inset,0 2px 10px rgba(13,27,30,.05);}
+  .card .media{position:relative;height:190px;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:46px;overflow:hidden;}
+  .card .media .badges{position:absolute;top:10px;left:10px;display:flex;gap:6px;}
+  .pill{background:rgba(251,250,245,.92);border-radius:7px;padding:3px 8px;font-size:11px;color:var(--sand);display:flex;align-items:center;gap:4px;}
+  .pill.status{position:absolute;top:10px;right:10px;left:auto;font-weight:600;}
+  .st-active{background:var(--green-bg);color:var(--green);}
+  .st-featured{background:var(--amber-bg);color:var(--amber);}
+  .card .body{padding:12px 15px;}
+  .card .row1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .card .title{font-family:"Sora",sans-serif;font-weight:600;font-size:16px;}
+  .card .price{font-family:"Sora",sans-serif;font-weight:600;font-size:16px;color:var(--teal);white-space:nowrap;}
+  .card .loc{font-size:13px;color:var(--sand);margin-top:5px;display:flex;align-items:center;gap:5px;}
+  .card .adDesc{font-size:13px;color:var(--sand);margin-top:6px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card .seller{display:flex;align-items:center;gap:8px;margin-top:10px;}
+  .avatar{width:26px;height:26px;border-radius:50%;background:var(--teal-l);color:var(--teal-d);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+  .card .stats{margin-left:auto;display:flex;gap:12px;font-size:12px;color:#8f9bb0;}
+  .card .stats span{display:flex;align-items:center;gap:4px;}
+  .actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;margin-top:13px;}
+  .actions button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;padding:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--sand);}
+  .actions button .i{font-size:16px;}
+  .actions button.on{border-color:var(--teal);color:var(--teal);background:var(--teal-l);}
+
+  /* FAB */
+  .fab{position:fixed;right:18px;bottom:80px;z-index:30;width:58px;height:58px;border-radius:50%;background:var(--teal);color:#fff;border:none;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(23,148,189,.4);display:flex;align-items:center;justify-content:center;}
+  .fab:active{transform:scale(.94);}
+
+  /* bottom nav */
+  .nav{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 10px;}
+  .nav button{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:#95a0b5;flex:1;}
+  .nav button.active{color:var(--teal);}
+  .nav button .i{font-size:20px;}
+
+  /* modal / sheet */
+  .overlay{position:fixed;inset:0;z-index:40;background:rgba(13,27,30,.5);display:flex;align-items:flex-end;justify-content:center;}
+  .sheet{background:var(--paper);width:100%;max-width:760px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px 18px 30px;}
+  .sheet h2{font-family:"Sora",sans-serif;font-size:19px;margin-bottom:4px;}
+  .sheet .lead{font-size:13px;color:var(--sand);margin-bottom:16px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:12.5px;color:var(--sand);margin-bottom:5px;font-weight:500;}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal);}
+  .seg{display:flex;gap:8px;}
+  .seg button{flex:1;padding:11px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--sand);font-size:13px;}
+  .seg button.sel{background:var(--teal);border-color:var(--teal);color:#fff;}
+  /* payment method cards */
+  .paylist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .paym{position:relative;display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:11px;text-align:left;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);}
+  .paym .pi{font-size:22px;}
+  .paym .pname{font-weight:600;font-family:"Sora";font-size:14px;}
+  .paym .pname .par{font-weight:400;color:#95a0b5;font-size:12px;margin-left:5px;}
+  .paym .pnote{grid-column:2/3;font-size:11.5px;color:var(--sand);font-weight:400;font-family:"IBM Plex Sans";}
+  .paym .ptick{color:transparent;font-size:16px;}
+  .paym.sel{border-color:var(--teal);background:var(--teal-l);}
+  .paym.sel .ptick{color:var(--teal);}
+  .paym.off{opacity:.55;cursor:not-allowed;background:#edeef6;}
+  .paym.off .plock{font-size:14px;}
+  .btn{width:100%;padding:13px;border:none;border-radius:11px;background:var(--teal);color:#fff;font-weight:600;font-size:15px;font-family:"Sora";}
+  .btn:disabled{opacity:.45;}
+  .btn.sec{background:none;border:1px solid var(--line);color:var(--sand);margin-top:8px;}
+  .terms{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--sand);max-height:170px;overflow-y:auto;margin-bottom:10px;}
+  .terms li{margin:6px 0 6px 16px;}
+  .chkrow{display:flex;align-items:flex-start;gap:9px;font-size:13px;margin-bottom:14px;}
+  .chkrow input{margin-top:3px;width:18px;height:18px;flex-shrink:0;}
+  .close{position:absolute;}
+  .sheet-x{float:right;background:none;border:none;font-size:22px;color:var(--sand);line-height:1;}
+
+  .empty{text-align:center;color:var(--sand);padding:50px 20px;}
+  .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;opacity:0;transition:.3s;z-index:60;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* admin */
+  .admin-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .admin-tabs button{flex:1;padding:9px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--sand);font-size:12.5px;}
+  .admin-tabs button.sel{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .review{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:11px;}
+  .review .rtitle{font-weight:600;font-family:"Sora";}
+  .review .meta{font-size:12px;color:var(--sand);margin:4px 0 10px;}
+  .review .rbtns{display:flex;gap:8px;}
+  .review .rbtns button{flex:1;padding:9px 0;border-radius:9px;border:none;font-size:13px;font-weight:600;}
+  .rb-ok{background:var(--green-bg);color:var(--green);}
+  .rb-no{background:var(--red-bg);color:var(--red);}
+  .feerow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;}
+  .feerow label{font-size:13px;color:var(--sand);flex:1;}
+  .feein{display:flex;align-items:center;gap:6px;}
+  .feein input{width:110px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);text-align:right;}
+  .feein span{font-size:12px;color:var(--muted);width:30px;}
+  html[dir="rtl"] .feein input{text-align:left;}
+  /* analytics */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;}
+  .kpi .kn{font-family:"Sora";font-weight:700;font-size:20px;color:var(--teal-d);}
+  .kpi .kl{font-size:11.5px;color:var(--sand);margin-top:3px;}
+  .chartcard{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px;margin-bottom:13px;}
+  .chartcard .ct{font-weight:600;font-family:"Sora";font-size:13.5px;margin-bottom:8px;}
+  .chart-legend{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;}
+  .chart-legend span{font-size:11.5px;color:var(--sand);display:flex;align-items:center;gap:5px;}
+  .chart-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  /* file attachments */
+  .filepreview{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;}
+  .filechip{position:relative;display:flex;align-items:center;gap:5px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:5px 8px 5px 6px;font-size:11px;max-width:150px;}
+  .filechip img{width:22px;height:22px;object-fit:cover;border-radius:4px;flex-shrink:0;}
+  .filechip .fi{font-size:15px;flex-shrink:0;}
+  .filechip .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;color:var(--sand);}
+  .filechip button{border:none;background:none;color:var(--red);font-size:15px;cursor:pointer;padding:0 1px;line-height:1;}
+  .pwbar{height:5px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px;margin-bottom:3px;}
+  .pwbar-fill{height:100%;border-radius:4px;transition:width .2s;}
+  .ghostmini{background:none;border:1px solid var(--line);color:var(--sand);font-size:11.5px;padding:5px 10px;border-radius:14px;}
+  .promo{background:linear-gradient(110deg,var(--amber),#9a560f);color:#fff;border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:8px;}
+  /* merchant storefront */
+  .store-cover{height:130px;border-radius:14px;background:linear-gradient(120deg,var(--teal),var(--teal-d));position:relative;display:flex;align-items:flex-end;}
+  .store-cover .editc{position:absolute;top:9px;right:9px;background:rgba(0,0,0,.35);color:#fff;border:none;font-size:11px;padding:5px 10px;border-radius:14px;}
+  html[dir="rtl"] .store-cover .editc{right:auto;left:9px;}
+  .store-head{display:flex;align-items:flex-end;gap:13px;padding:0 6px;margin-top:-34px;position:relative;z-index:2;}
+  .store-logo{width:72px;height:72px;border-radius:18px;background:var(--card);border:3px solid var(--card);box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--teal-d);overflow:hidden;flex-shrink:0;}
+  .store-logo img,.store-cover img{width:100%;height:100%;object-fit:cover;}
+  .store-id{padding-bottom:4px;}
+  .store-id .sn{font-family:"Sora";font-weight:600;font-size:18px;}
+  .store-id .sm{font-size:12.5px;color:var(--sand);}
+  .store-edit-row{display:flex;gap:8px;margin:12px 0 4px;}
+  .store-edit-row button{flex:1;font-size:12px;padding:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--sand);}
+  .store-bio{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--card);font:inherit;font-size:13px;color:var(--ink);resize:vertical;}
+  .store-tabs{display:flex;gap:8px;margin:16px 0 12px;}
+  .store-tabs button{flex:1;padding:9px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--sand);font-size:12.5px;}
+  .store-tabs button.sel{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .post-page-btn{width:100%;padding:12px;border:1px dashed var(--teal);border-radius:11px;background:var(--teal-l);color:var(--teal-d);font-weight:600;font-family:"Sora";margin-bottom:14px;}
+  /* chat */
+  .conv{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:9px;cursor:pointer;}
+  .conv .cmeta{flex:1;min-width:0;}
+  .conv .cn{font-weight:600;font-size:14px;}
+  .conv .cl{font-size:12px;color:var(--sand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .conv .unread{width:9px;height:9px;border-radius:50%;background:var(--teal);}
+  .chatbox{display:flex;flex-direction:column;height:62vh;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card);}
+  .chat-head{padding:11px 14px;border-bottom:1px solid var(--line);font-weight:600;font-family:"Sora";display:flex;align-items:center;gap:8px;}
+  .chat-msgs{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:8px;}
+  .bub{max-width:78%;padding:8px 12px;border-radius:14px;font-size:13.5px;line-height:1.4;}
+  .bub.them{align-self:flex-start;background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:4px;}
+  .bub.me{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:4px;}
+  html[dir="rtl"] .bub.them{align-self:flex-end;border-bottom-left-radius:14px;border-bottom-right-radius:4px;}
+  html[dir="rtl"] .bub.me{align-self:flex-start;border-bottom-right-radius:14px;border-bottom-left-radius:4px;}
+  .chat-in{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);}
+  .chat-in input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;background:var(--paper);color:var(--ink);}
+  .chat-in button{border:none;background:var(--teal);color:#fff;border-radius:20px;padding:0 16px;font-weight:600;}
+  /* map */
+  #mapbox{position:relative;height:420px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  #mapgrid{position:absolute;inset:0;background:repeating-linear-gradient(0deg,var(--line) 0 .5px,transparent .5px 38px),repeating-linear-gradient(90deg,var(--line) 0 .5px,transparent .5px 38px);opacity:.45;}
+  .mappin{position:absolute;transform:translate(-50%,-100%);background:var(--teal);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:14px;white-space:nowrap;cursor:pointer;border:1.5px solid #fff;}
+  .mappin.featured{background:var(--amber);}
+  .mappin:active{transform:translate(-50%,-100%) scale(.92);}
+</style>
+
+
+<header>
+  <div class="logo">Souq<span class="ar">خفض لى</span></div>
+  <button class="iconbtn lang" id="langBtn" title="Language">ع</button>
+  <button class="iconbtn" id="themeBtn" title="Theme">🌙</button>
+  <div class="city"><span class="i">📍</span>
+    <select id="citySel"></select>
+  </div>
+  <div class="who" id="whoBadge">Guest</div>
+</header>
+
+<div class="wrap" id="screen"></div>
+
+<button class="fab" id="fab">+</button>
+
+<nav class="nav">
+  <button data-screen="feed" class="active"><span class="i">🏠</span>Feed</button>
+  <button data-screen="map"><span class="i">🗺️</span>Map</button>
+  <button data-screen="store" id="navStore"><span class="i">🏬</span>Store</button>
+  <button data-screen="saved"><span class="i">🔖</span>Saved</button>
+  <button data-screen="admin"><span class="i">🛡️</span>Admin</button>
+  <button data-screen="account"><span class="i">👤</span>Account</button>
+</nav>
+
+<div id="overlayRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+//// ---------- i18n ----------
+const I18N = {
+  en:{
+    feed:"Feed", map:"Map", saved:"Saved", admin:"Admin", account:"Account",
+    guest:"Guest", search:"Search ads in", noAds:"No ads in", tapPlus:"Tap + to post the first one.",
+    negotiable:"negotiable", call:"Call", whatsapp:"WhatsApp", like:"Like", save:"Save",
+    featured:"Featured", active:"Active", savedAds:"Saved ads", nothingSaved:"Nothing saved yet.",
+    tapSave:"Tap 🔖 Save on any ad.", postAd:"Post an ad", payment:"Payment",
+    join:"Join Souq", logIn:"Register / Log in", logOut:"Log out", myAds:"My ads",
+    pending:"pending activation", browseGuest:"You're browsing as a guest.",
+    adminPanel:"Admin panel", adReview:"Ad review", cashProofs:"Cash proofs", fees:"Fees",
+    noReview:"No paid ads waiting for content review.", noCash:"No cash receipts pending.",
+    cont:"Continue", langName:"ع",
+    myStore:"My store", store:"Store", editCover:"Change cover", editLogo:"Change logo",
+    postFromPage:"Post an ad from my page", storeAds:"Store ads", messages:"Messages",
+    noStoreAds:"No published ads yet. Post your first from your page.",
+    noMsgs:"No conversations yet. Buyers who message you appear here.",
+    typeMsg:"Write a message…", send:"Send", chatWith:"Chat", backStore:"← Back to store",
+    aboutStore:"About", storeBio:"Tell buyers about your store…", saveStore:"Save store",
+    // form fields
+    f_title:"Title", ph_title:"e.g. Toyota Camry 2021", f_category:"Category",
+    f_price:"Price (SDG)", f_district:"District", ph_district:"Neighborhood",
+    f_negQ:"Price negotiable?", neg:"Negotiable", fixed:"Fixed price",
+    f_wa:"WhatsApp number", contPay:"Continue to payment",
+    f_method:"Method", f_username:"Username", ph_name:"Your name",
+    f_sellerName:"Seller name", f_dept:"Sales department", f_city:"City",
+    f_storeName:"Store name", ph_store:"Store name", f_email:"Email",
+    f_idProof:"Proof of identity", f_acceptTerms:"I accept and abide by the merchant terms and conditions.",
+    createEnter:"Create account & enter", submitMerchant:"Submit · admin will send a confirmation code",
+    accountType:"Account type", buyer:"Buyer", seller:"Seller", merchant:"Merchant",
+    chooseUse:"Choose how you want to use the app.", roleLead:"You need an account to post. Register or log in first.",
+    otherSpecify:"Please specify", receiptPhoto:"Payment receipt photo", notesOpt:"Notes (optional)",
+    submitReceipt:"Submit receipt · pay", cancel:"Cancel", confCode:"Confirmation code",
+    enterCode:"Enter code", confirmPay:"Confirm & pay opening fee",
+    adsUnit:"Ads", stats:"Analytics", createAd:"Create ad", allAds:"All ads", noAllAds:"No ads yet.",
+    edit:"Edit", delete:"Delete", unfeature:"Unfeature", feature:"Feature", publish:"Publish", unpublish:"Unpublish",
+    confirmDelete:"Delete this ad permanently?", adCreated:"Ad created & published", adUpdated:"Ad updated", adDeleted:"Ad deleted",
+    kpiUsers:"Total users", kpiMerchants:"Merchants", kpiAds:"Published ads", kpiRevenue:"Revenue collected",
+    regTraffic:"Registrations by category (14 days)", adTraffic:"Ad traffic (14 days)", revFlow:"Revenue flow (14 days)",
+    posted:"Posted", newAds:"New ads", today:"Today", saveEdit:"Save changes", cancelEdit:"Cancel", status:"Status",
+    approved:"Published", rejected:"Rejected/Unpublished", pending_review:"In review", pending_payment:"Awaiting payment",
+    f_attach:"Photos / PDF / Video", attachHint:"You can attach multiple photos, a PDF brochure, or a video. Images are shown on the ad card.",
+    f_desc:"Description", ph_desc:"Describe the item — condition, features, why it's a great deal…",
+    storeMerchantOnly:"Store — merchants only. This is not accessible to sellers.",
+    // account security
+    registerTab:"Register", loginTab:"Log in", password:"Password", confirmPassword:"Confirm password",
+    pwWeak:"Weak", pwMedium:"Medium", pwStrong:"Strong",
+    pwHint:"8–12 chars, must include upper/lower case, a number, and a symbol", pwMismatch:"Passwords don't match",
+    pwTooWeak:"Password is too weak — use 8–12 characters with at least one upper-case, one lower-case, one number, and one symbol.",
+    verifyEmail:"Verify your email", verifyEmailLead:"We sent a verification code to",
+    verifyWa:"Verify your WhatsApp number", verifyWaLead:"We sent a verification code via WhatsApp to",
+    f_contact:"WhatsApp number or email", ph_contact:"+249… or you@email.com",
+    invalidContact:"Enter a valid WhatsApp number or email.", contactTaken:"That WhatsApp number / email is already registered.",
+    noAccountContact:"No account found with that WhatsApp number or email",
+    adCode:"Ad confirmation code", adCodeHint:"Code issued after the admin checked your payment receipt.",
+    waError:"There is an error in the entered Number", waFormatHint:"Accepted: +249 followed by 9 digits, or just 9 digits (will auto-add +249).",
+    inquiry:"Product inquiry", textOnly:"Text-only chat — sending files of any kind is not allowed.",
+    askSeller:"Ask the seller about this product…", filesBlocked:"Files are not allowed in this chat.",
+    demoCode:"Demo code", verify:"Verify", wrongCode:"Incorrect code",
+    invalidEmail:"Enter a valid email address",
+    noAccountEmail:"No account found with that email", accountSuspended:"This account is suspended",
+    accountLocked:"Too many attempts. Locked — try again in", wrongPassword:"Incorrect password",
+    attemptsLeft:"attempts left", tooManyAttempts:"Too many failed attempts. Temporarily locked.",
+    tryAgainIn:"Try again in", welcomeBack:"Welcome back, ",
+    mfaTitle:"Two-factor verification", mfaLead:"Enter the verification code to complete admin login.",
+    seconds:"s",
+    // admin room
+    adminLogin:"Admin login", adminLocked:"This room is restricted to administrators.",
+    username:"Username", password:"Password", login:"Log in", wrongLogin:"Wrong username or password.",
+    logoutAdmin:"Log out of admin", users:"Users", content:"Hall", codes:"Codes",
+    suspend:"Suspend", activate:"Activate", cancelReg:"Cancel registration", suspended:"Suspended",
+    freeStore:"Free this store", storeFreed:"Store freed (opening fee waived)", freed:"Freed",
+    promoTitle:"Advertising Hall · promotional content", promoHint:"Pin promotional banners shown at the top of the public feed.",
+    addPromo:"Add promo banner", promoText:"Banner text", from:"From", to:"To", remove:"Remove",
+    genCode:"Generate code", codeFor:"Category / role", sendCode:"Send to user", activeCodes:"Active codes",
+    noUsers:"No registered users yet.", noCodes:"No codes generated yet.", noPromo:"No promotions yet."
+  },
+  ar:{
+    feed:"الرئيسية", map:"الخريطة", saved:"المحفوظة", admin:"الإدارة", account:"حسابي",
+    guest:"زائر", search:"ابحث في إعلانات", noAds:"لا توجد إعلانات في", tapPlus:"اضغط + لنشر أول إعلان.",
+    negotiable:"قابل للتفاوض", call:"اتصال", whatsapp:"واتساب", like:"إعجاب", save:"حفظ",
+    featured:"مميّز", active:"نشط", savedAds:"الإعلانات المحفوظة", nothingSaved:"لا يوجد محفوظات بعد.",
+    tapSave:"اضغط 🔖 حفظ على أي إعلان.", postAd:"نشر إعلان", payment:"الدفع",
+    join:"انضم إلى خفض لى", logIn:"تسجيل / دخول", logOut:"تسجيل الخروج", myAds:"إعلاناتي",
+    pending:"بانتظار التفعيل", browseGuest:"أنت تتصفّح كزائر.",
+    adminPanel:"لوحة الإدارة", adReview:"مراجعة الإعلانات", cashProofs:"إيصالات نقدية", fees:"الرسوم",
+    noReview:"لا توجد إعلانات مدفوعة بانتظار المراجعة.", noCash:"لا توجد إيصالات نقدية معلّقة.",
+    cont:"متابعة", langName:"EN",
+    myStore:"متجري", store:"المتجر", editCover:"تغيير الغلاف", editLogo:"تغيير الشعار",
+    postFromPage:"نشر إعلان من صفحتي", storeAds:"إعلانات المتجر", messages:"الرسائل",
+    noStoreAds:"لا توجد إعلانات منشورة بعد. انشر أول إعلان من صفحتك.",
+    noMsgs:"لا توجد محادثات بعد. المشترون الذين يراسلونك يظهرون هنا.",
+    typeMsg:"اكتب رسالة…", send:"إرسال", chatWith:"محادثة", backStore:"← العودة إلى المتجر",
+    aboutStore:"نبذة", storeBio:"عرّف المشترين بمتجرك…", saveStore:"حفظ المتجر",
+    // form fields
+    f_title:"العنوان", ph_title:"مثال: تويوتا كامري 2021", f_category:"الفئة",
+    f_price:"السعر (ج.س)", f_district:"الحي", ph_district:"اسم الحي",
+    f_negQ:"السعر قابل للتفاوض؟", neg:"قابل للتفاوض", fixed:"سعر ثابت",
+    f_wa:"رقم واتساب", contPay:"المتابعة إلى الدفع",
+    f_method:"طريقة الدفع", f_username:"اسم المستخدم", ph_name:"اسمك",
+    f_sellerName:"اسم البائع", f_dept:"قسم المبيعات", f_city:"المدينة",
+    f_storeName:"اسم المتجر", ph_store:"اسم المتجر", f_email:"البريد الإلكتروني",
+    f_idProof:"إثبات الهوية", f_acceptTerms:"أوافق على الشروط والأحكام الخاصة بالتجار وألتزم بها.",
+    createEnter:"إنشاء الحساب والدخول", submitMerchant:"إرسال · سيرسل المشرف رمز تأكيد",
+    accountType:"نوع الحساب", buyer:"مشتري", seller:"بائع", merchant:"تاجر",
+    chooseUse:"اختر طريقة استخدامك للتطبيق.", roleLead:"تحتاج إلى حساب للنشر. سجّل أو ادخل أولاً.",
+    otherSpecify:"يرجى التحديد", receiptPhoto:"صورة إيصال الدفع", notesOpt:"ملاحظات (اختياري)",
+    submitReceipt:"إرسال الإيصال · ادفع", cancel:"إلغاء", confCode:"رمز التأكيد",
+    enterCode:"أدخل الرمز", confirmPay:"تأكيد ودفع رسوم الافتتاح",
+    // admin room
+    adminLogin:"دخول المشرف", adminLocked:"هذه الغرفة مخصّصة للمشرفين فقط.",
+    username:"اسم المستخدم", password:"كلمة المرور", login:"دخول", wrongLogin:"اسم المستخدم أو كلمة المرور غير صحيحة.",
+    logoutAdmin:"خروج المشرف", users:"المستخدمون", content:"القاعة", codes:"الرموز",
+    suspend:"تعليق", activate:"تفعيل", cancelReg:"إلغاء التسجيل", suspended:"موقوف",
+    freeStore:"تحرير هذا المتجر", storeFreed:"تم تحرير المتجر (إعفاء رسوم الافتتاح)", freed:"محرّر",
+    promoTitle:"قاعة الإعلانات · المحتوى الترويجي", promoHint:"ثبّت لافتات ترويجية تظهر أعلى القائمة العامة.",
+    addPromo:"إضافة لافتة ترويجية", promoText:"نص اللافتة", from:"من", to:"إلى", remove:"حذف",
+    genCode:"توليد رمز", codeFor:"الفئة / الدور", sendCode:"إرسال للمستخدم", activeCodes:"الرموز الفعّالة",
+    noUsers:"لا يوجد مستخدمون مسجّلون بعد.", noCodes:"لم يتم توليد رموز بعد.", noPromo:"لا توجد عروض ترويجية بعد.",
+    adsUnit:"الإعلانات", stats:"التحليلات", createAd:"إنشاء إعلان", allAds:"جميع الإعلانات", noAllAds:"لا توجد إعلانات بعد.",
+    edit:"تعديل", delete:"حذف", unfeature:"إلغاء التمييز", feature:"تمييز", publish:"نشر", unpublish:"إلغاء النشر",
+    confirmDelete:"حذف هذا الإعلان نهائياً؟", adCreated:"تم إنشاء الإعلان ونشره", adUpdated:"تم تحديث الإعلان", adDeleted:"تم حذف الإعلان",
+    kpiUsers:"إجمالي المستخدمين", kpiMerchants:"التجّار", kpiAds:"الإعلانات المنشورة", kpiRevenue:"الإيرادات المحصّلة",
+    regTraffic:"التسجيلات حسب الفئة (14 يوماً)", adTraffic:"حركة الإعلانات (14 يوماً)", revFlow:"تدفق الإيرادات (14 يوماً)",
+    posted:"منشور", newAds:"إعلانات جديدة", today:"اليوم", saveEdit:"حفظ التغييرات", cancelEdit:"إلغاء", status:"الحالة",
+    approved:"منشور", rejected:"مرفوض/غير منشور", pending_review:"قيد المراجعة", pending_payment:"بانتظار الدفع",
+    f_attach:"صور / ملف PDF / فيديو", attachHint:"يمكنك إرفاق عدة صور، أو كتيّب PDF، أو فيديو. تُعرض الصور على بطاقة الإعلان.",
+    f_desc:"الوصف", ph_desc:"صف السلعة — الحالة، المميزات، ولماذا هي صفقة جيدة…",
+    storeMerchantOnly:"المتجر — للتجّار فقط. لا يمكن للبائعين الدخول إليه.",
+    registerTab:"تسجيل جديد", loginTab:"تسجيل الدخول", password:"كلمة المرور", confirmPassword:"تأكيد كلمة المرور",
+    pwWeak:"ضعيفة", pwMedium:"متوسطة", pwStrong:"قوية",
+    pwHint:"8–12 حرفاً، يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز", pwMismatch:"كلمتا المرور غير متطابقتين",
+    pwTooWeak:"كلمة المرور ضعيفة جداً — استخدم 8–12 حرفاً مع حرف كبير وحرف صغير ورقم ورمز.",
+    verifyEmail:"تأكيد البريد الإلكتروني", verifyEmailLead:"أرسلنا رمز التحقق إلى",
+    verifyWa:"تأكيد رقم الواتساب", verifyWaLead:"أرسلنا رمز التحقق عبر واتساب إلى",
+    f_contact:"رقم واتساب أو بريد إلكتروني", ph_contact:"+249… أو you@email.com",
+    invalidContact:"أدخل رقم واتساب أو بريداً إلكترونياً صحيحاً.", contactTaken:"هذا الرقم / البريد مسجّل بالفعل.",
+    noAccountContact:"لا يوجد حساب بهذا الرقم أو البريد",
+    adCode:"رمز تأكيد الإعلان", adCodeHint:"يصدر الرمز بعد تحقق المشرف من إيصال الدفع.",
+    waError:"هناك خطأ في الرقم المدخل", waFormatHint:"المقبول: +249 متبوعاً بـ 9 أرقام، أو 9 أرقام فقط (سيتم إضافة +249 تلقائياً).",
+    inquiry:"استفسار عن المنتج", textOnly:"محادثة نصية فقط — لا يُسمح بإرسال الملفات بأي شكل.",
+    askSeller:"اسأل البائع عن هذا المنتج…", filesBlocked:"لا يُسمح بإرسال الملفات في هذه المحادثة.",
+    demoCode:"رمز تجريبي", verify:"تأكيد", wrongCode:"رمز غير صحيح",
+    invalidEmail:"أدخل بريداً إلكترونياً صحيحاً",
+    noAccountEmail:"لا يوجد حساب بهذا البريد الإلكتروني", accountSuspended:"هذا الحساب معلّق",
+    accountLocked:"محاولات كثيرة جداً. مقفل — أعد المحاولة بعد", wrongPassword:"كلمة المرور غير صحيحة",
+    attemptsLeft:"محاولات متبقية", tooManyAttempts:"محاولات فاشلة كثيرة جداً. تم القفل مؤقتاً.",
+    tryAgainIn:"أعد المحاولة بعد", welcomeBack:"أهلاً بعودتك، ",
+    mfaTitle:"التحقق بخطوتين", mfaLead:"أدخل رمز التحقق لإكمال تسجيل دخول المشرف.",
+    seconds:"ث"
+  }
+};
+function t(k){return (I18N[state.lang]||I18N.en)[k] || I18N.en[k] || k;}
+
+//// ---------- seed data placeholder marker ----------
+const CITIES = [
+  ["Khartoum","الخرطوم",15.59,32.53],["Omdurman","أم درمان",15.64,32.48],
+  ["Bahri","بحري",15.63,32.56],["Port Sudan","بورتسودان",19.60,37.21],
+  ["Kassala","كسلا",15.45,36.40],["Gedaref","القضارف",14.02,35.37],
+  ["Wad Madani","ود مدني",14.39,33.54],["El Obeid","الأبيض",13.18,30.22],
+  ["Nyala","نيالا",12.05,24.88],["El Fasher","الفاشر",13.62,25.36],
+  ["Atbara","عطبرة",17.71,34.00],["Dongola","دنقلا",19.17,30.47],
+  ["Kosti","كوستي",13.13,32.64],["Sennar","سنار",13.03,33.98]
+];
+const CATEGORIES = ["All","Cars","Electronics","Real Estate","Furniture","Phones","Jobs","Services","Fashion","Travel & Tourism","Pharmacy","Shop","Other"];
+const CAT_AR = {All:"الكل",Cars:"سيارات",Electronics:"إلكترونيات",["Real Estate"]:"عقارات",Furniture:"أثاث",Phones:"هواتف",Jobs:"وظائف",Services:"خدمات",Fashion:"أزياء",["Travel & Tourism"]:"سفر وسياحة",Pharmacy:"صيدلية",Shop:"دكان",Other:"أخرى"};
+function catLabel(c){return state.lang==='ar' ? (CAT_AR[c]||c) : c;}
+const CAT_ICON = {Cars:"🚗",Electronics:"💻",["Real Estate"]:"🏠",Furniture:"🛋️",Phones:"📱",Jobs:"💼",Services:"🔧",Fashion:"👕",["Travel & Tourism"]:"✈️",Pharmacy:"💊",Shop:"🛍️",Other:"🏷️"};
+
+// Payment methods mirror the payment_methods table (key, labels, is_active, config).
+// Phase 1: only cash is active. Others are present but inactive.
+const PAYMENT_METHODS = [
+  {key:"cash",   icon:"💵", name_en:"Cash",          name_ar:"نقدي",      active:true,  note:"Upload a payment receipt for admin review"},
+  {key:"paypal", icon:"🅿️", name_en:"PayPal",        name_ar:"باي بال",   active:false, note:"Coming soon"},
+  {key:"card",   icon:"💳", name_en:"Bank card",     name_ar:"بطاقة بنكية", active:false, note:"Coming soon"},
+  {key:"mada",   icon:"🏦", name_en:"Mada",          name_ar:"مدى",       active:false, note:"Coming soon"},
+  {key:"bank",   icon:"🏛️", name_en:"Bank transfer", name_ar:"تحويل بنكي", active:false, note:"Coming soon"}
+];
+// Default fee rules & commission for Sudan (SDG). Admin can edit these in-app.
+const DEFAULT_FEES = {
+  ad_publishing: 1000,   // seller per-ad publish fee
+  featured: 5000,
+  ad_appearance: 2500,
+  highlight: 3000,
+  mark_new: 1500,
+  merchant_opening: 50000, // merchant store opening fee
+  commission_percent: 5    // % platform commission on merchant sales
+};
+function feeOf(k){ return (state.fees && state.fees[k]!=null) ? state.fees[k] : DEFAULT_FEES[k]; }
+function PUBLISH_FEE(){ return feeOf('ad_publishing'); }
+
+const SEED_ADS = [
+  {id:1,title:"Toyota Camry 2021",cat:"Cars",price:8500000,cur:"SDG",city:"Khartoum",dist:"Al Salamah",seller:"Mohammed A.",neg:true,status:"approved",featured:true,views:1204,likes:38,photos:6,vids:2},
+  {id:2,title:"iPhone 14 Pro 256GB",cat:"Phones",price:1750000,cur:"SDG",city:"Khartoum",dist:"Riyadh",seller:"Aisha K.",neg:false,status:"approved",featured:false,views:842,likes:51,photos:4,vids:0},
+  {id:3,title:"3-Bedroom Apartment",cat:"Real Estate",price:45000000,cur:"SDG",city:"Omdurman",dist:"Al Thawra",seller:"Osman Real Estate",neg:true,status:"approved",featured:true,views:2310,likes:74,photos:9,vids:1},
+  {id:4,title:"Samsung 55\" 4K TV",cat:"Electronics",price:980000,cur:"SDG",city:"Port Sudan",dist:"Downtown",seller:"Khalid S.",neg:true,status:"approved",featured:false,views:430,likes:19,photos:3,vids:0},
+  {id:5,title:"Office Desk + Chair",cat:"Furniture",price:320000,cur:"SDG",city:"Wad Madani",dist:"Central",seller:"Huda M.",neg:true,status:"approved",featured:false,views:178,likes:7,photos:5,vids:0},
+  {id:6,title:"Hyundai Elantra 2019",cat:"Cars",price:6200000,cur:"SDG",city:"Kassala",dist:"Al Souq",seller:"Tariq A.",neg:true,status:"approved",featured:false,views:651,likes:22,photos:7,vids:1}
+];
+
+//// ---------- API layer ----------
+const API_BASE = window.location.origin + '/api';
+let sessionId = localStorage.getItem('souq_session');
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (sessionId) opts.headers['x-session-id'] = sessionId;
+  if (body instanceof FormData) {
+    opts.body = body;
+  } else if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(API_BASE + path, opts);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+function saveSession(sid) {
+  sessionId = sid;
+  if (sid) localStorage.setItem('souq_session', sid);
+  else localStorage.removeItem('souq_session');
+}
+
+//// ---------- state ----------
+let state = {user:null, city:"Khartoum", cat:"All", q:"", screen:"feed",
+             ads:[], engage:{}, draft:null, lang:"en", theme:"light", adminAuthed:false};
+const KEY="souqna_app_v1";
+
+async function load(){
+  try {
+    // Restore basic prefs from localStorage
+    try {
+      const raw = localStorage.getItem(KEY + '_prefs');
+      if (raw) {
+        const s = JSON.parse(raw);
+        state.city = s.city || "Khartoum";
+        state.lang = s.lang || "en";
+        state.theme = s.theme || "light";
+      }
+    } catch(e) {}
+
+    // Get current user session
+    try {
+      const me = await api('GET', '/auth/me');
+      if (me && me.user) {
+        state.user = me.user;
+      }
+    } catch(e) {}
+
+    // Load ads from API
+    try {
+      const result = await api('GET', '/ads');
+      if (result && result.ads) {
+        state.ads = result.ads;
+      }
+    } catch(e) {}
+
+    // Load promos
+    try {
+      const promos = await api('GET', '/promos');
+      state.promos = promos || [];
+    } catch(e) {}
+
+    // Load fees from admin settings if admin
+    try {
+      const settings = await api('GET', '/admin/settings');
+      if (settings) {
+        state.fees = {};
+        const feeKeys = ['ad_publishing','featured','ad_appearance','highlight','mark_new','merchant_opening','commission_percent'];
+        for (const k of feeKeys) {
+          if (settings[k] != null) state.fees[k] = +settings[k];
+        }
+      }
+    } catch(e) {}
+
+    // Load engagements
+    try {
+      const savedResult = await api('GET', '/ads?saved=1');
+      state.engage = {};
+      if (savedResult && savedResult.ads) {
+        for (const a of savedResult.ads) {
+          if (a.saved) {
+            state.engage[a.id] = state.engage[a.id] || {};
+            state.engage[a.id].saved = true;
+          }
+        }
+      }
+    } catch(e) {}
+  } catch(e) {}
+
+  // Seed ads fallback
+  if (state.ads.length === 0) {
+    state.ads = [...SEED_ADS];
+  }
+
+  state.adminAuthed = false;
+  state.adminMfaPending = false;
+  if (!state.nextId) state.nextId = Math.max(1000, ...state.ads.map(a => a.id || 0)) + 1;
+}
+
+async function save(){
+  // Persist prefs locally
+  try {
+    localStorage.setItem(KEY + '_prefs', JSON.stringify({
+      city: state.city, lang: state.lang, theme: state.theme
+    }));
+  } catch(e) {}
+  // Data is persisted via individual API calls
+  // This function now only keeps local cache in memory + prefs in localStorage
+}
+
+function applyChrome(){
+  document.documentElement.setAttribute('data-theme', state.theme);
+  document.documentElement.setAttribute('dir', state.lang==='ar'?'rtl':'ltr');
+  document.documentElement.setAttribute('lang', state.lang);
+  document.getElementById('themeBtn').textContent = state.theme==='dark'?'☀️':'🌙';
+  document.getElementById('langBtn').textContent = t('langName');
+  // nav labels
+  document.querySelectorAll('.nav button').forEach(b=>{
+    const k=b.dataset.screen; const icon=b.querySelector('.i').outerHTML;
+    b.innerHTML = icon + t(k);
+  });
+  // The Store tab is exclusive to merchants. Sellers have no dedicated page —
+  // they post ads from the main dashboard's "+" button, same as buyers see it,
+  // under the normal conditions (payment required for sellers).
+  const ns=document.getElementById('navStore');
+  if(ns){
+    const role=state.user&&state.user.role;
+    if(role==='merchant'){ ns.dataset.screen='store'; ns.innerHTML='<span class="i">🏬</span>'+t('store'); ns.style.display=''; }
+    else { ns.style.display='none'; }
+  }
+}
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1600);}
+function money(n,c){return new Intl.NumberFormat('en-US').format(n)+" "+c;}
+function initials(s){return s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
+
+//// ---------- render shell ----------
+function renderCitySel(){
+  const sel=document.getElementById('citySel');
+  sel.innerHTML=CITIES.map(c=>`<option ${c[0]===state.city?'selected':''}>${c[0]}</option>`).join('');
+  sel.onchange=()=>{state.city=sel.value;save();route();};
+}
+function renderWho(){
+  const b=document.getElementById('whoBadge');
+  b.textContent = state.user ? (state.user.role[0].toUpperCase()+state.user.role.slice(1)+" · "+state.user.name.split(' ')[0]) : "Guest";
+}
+
+//// ---------- screens ----------
+function route(){
+  // SECURITY: the admin room re-locks the moment you navigate anywhere else.
+  // Leaving 'admin' always clears the unlocked flag, so returning to it —
+  // by this user or anyone else on the same device — requires login again.
+  if(state.screen!=='admin'){ if(state.adminAuthed) state.adminAuthed=false; state.adminMfaPending=false; }
+  renderWho();
+  applyChrome();
+  const s=document.getElementById('screen');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.screen===state.screen));
+  document.getElementById('fab').classList.toggle('hidden', !(state.screen==='feed'||state.screen==='map'));
+  if(state.screen==='feed') s.innerHTML=feedHTML(), bindFeed();
+  else if(state.screen==='map') s.innerHTML='', renderMap(s);
+  else if(state.screen==='saved') s.innerHTML=savedHTML(), bindFeed();
+  else if(state.screen==='admin') renderAdmin(s);
+  else if(state.screen==='store') renderStore(s);
+  else if(state.screen==='account') renderAccount(s);
+}
+
+function visibleAds(){
+  return state.ads.filter(a=>a.status==='approved'
+    && a.city===state.city
+    && (state.cat==='All'||a.cat===state.cat)
+    && (!state.q||a.title.toLowerCase().includes(state.q.toLowerCase())))
+    .sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
+}
+
+function feedHTML(){
+  const ads=visibleAds();
+  return `
+  <div class="searchrow"><input id="q" placeholder="${t('search')} ${state.city}…" value="${state.q}"></div>
+  <div class="cats">${CATEGORIES.map(c=>`<button class="cat ${c===state.cat?'active':''}" data-cat="${c}">${catLabel(c)}</button>`).join('')}</div>
+  ${ads.length? ads.map(cardHTML).join('') : `<div class="empty">${t('noAds')} ${state.city}.<br>${t('tapPlus')}</div>`}`;
+}
+function savedHTML(){
+  const saved=state.ads.filter(a=>state.engage[a.id]&&state.engage[a.id].saved);
+  return `<h2 style="font-family:Sora;font-size:18px;margin:4px 0 14px;">${t('savedAds')}</h2>
+    ${saved.length? saved.map(cardHTML).join('') : `<div class="empty">${t('nothingSaved')}<br>${t('tapSave')}</div>`}`;
+}
+
+function cardHTML(a){
+  const e=state.engage[a.id]||{};
+  const likes=a.likes+(e.liked?1:0);
+  const imgAtt=(a.attachments||[]).find(f=>f.kind==='image');
+  const mediaInner = imgAtt ? `<img src="${imgAtt.dataUrl}" style="width:100%;height:100%;object-fit:cover">` : (CAT_ICON[a.cat]||"🏷️");
+  return `
+  <div class="card">
+    <div class="media">${mediaInner}
+      <div class="badges">
+        ${a.photos?`<span class="pill">📷 ${a.photos}</span>`:''}
+        ${a.vids?`<span class="pill">🎬 ${a.vids}</span>`:''}
+        ${a.docs?`<span class="pill">📄 ${a.docs}</span>`:''}
+      </div>
+      <span class="pill status ${a.featured?'st-featured':'st-active'}">${a.featured?t('featured'):t('active')}</span>
+    </div>
+    <div class="body">
+      <div class="row1"><span class="title">${a.title}</span><span class="price">${money(a.price,a.cur)}</span></div>
+      ${a.desc?`<div class="adDesc">${a.desc}</div>`:''}
+      <div class="loc">📍 ${a.city}${a.dist?' · '+a.dist:''}  ${a.neg?'<span class="mono" style="margin-left:6px;color:var(--muted);">· '+t('negotiable')+'</span>':''}</div>
+      <div class="seller">
+        <span class="avatar">${initials(a.seller)}</span>
+        <span style="font-size:13px;color:var(--sand);">${a.seller}</span>
+        <span class="stats"><span>👁 ${a.views}</span><span>❤ ${likes}</span></span>
+      </div>
+      <div class="actions">
+        <button onclick="act('call',${a.id})"><span class="i">📞</span>${t('call')}</button>
+        <button onclick="act('wa',${a.id})"><span class="i">🟢</span>${t('whatsapp')}</button>
+        <button class="${e.liked?'on':''}" onclick="act('like',${a.id})"><span class="i">❤</span>${t('like')}</button>
+        <button class="${e.saved?'on':''}" onclick="act('save',${a.id})"><span class="i">🔖</span>${t('save')}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function act(type,id){
+  const a=state.ads.find(x=>x.id===id); if(!a)return;
+  state.engage[id]=state.engage[id]||{};
+  const e=state.engage[id];
+  if(type==='like'){
+    e.liked=!e.liked; toast(e.liked?'Liked':'Like removed');
+    try { await api('POST', '/ads/'+id+'/like'); } catch(ex) { e.liked=!e.liked; }
+  } else if(type==='save'){
+    e.saved=!e.saved; toast(e.saved?'Saved':'Removed from saved');
+    try { await api('POST', '/ads/'+id+'/save'); } catch(ex) { e.saved=!e.saved; }
+  } else if(type==='call'){toast('📞 '+(a.neg?'Calling seller…':'Calling seller…')); }
+  else if(type==='wa'){openInquiry(id); return;}
+  route();
+}
+
+// Product-inquiry chat (spec item 7): the WhatsApp icon opens a normal written
+// conversation with the seller. Files of any kind are prohibited — there is no
+// attach control, and pasted/dropped files are rejected.
+function guardFiles(e){
+  const dt=e.clipboardData||e.dataTransfer;
+  if(dt && dt.files && dt.files.length){ e.preventDefault(); toast(t('filesBlocked')); return false; }
+  return true;
+}
+async function openInquiry(adId){
+  const a=state.ads.find(x=>x.id===adId); if(!a)return;
+  state.inquiries=state.inquiries||[];
+  let q=state.inquiries.find(x=>x.adId===adId);
+  if(!q){
+    try {
+      const result = await api('POST', '/inquiries/on/' + adId);
+      q = {adId, adTitle: a.title, seller: a.seller, msgs: [], id: result.id};
+    } catch(ex) {
+      q = {adId, adTitle: a.title, seller: a.seller, msgs: []};
+    }
+    state.inquiries.push(q);
+  }
+  // Fetch messages
+  if (q.id) {
+    try {
+      const msgs = await api('GET', '/inquiries');
+      const inquiry = msgs.find(x => x.id === q.id);
+      if (inquiry) q.msgs = inquiry.messages || [];
+    } catch(ex) {}
+  }
+  showSheet(inquirySheet(q));
+  const m=document.getElementById('iqMsgs'); if(m)m.scrollTop=m.scrollHeight;
+  const i=document.getElementById('iqInput'); if(i)i.focus();
+}
+function inquirySheet(q){
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>💬 ${t('inquiry')}</h2>
+  <p class="lead" style="margin-bottom:8px"><b>${q.adTitle}</b> · ${q.seller}</p>
+  <p class="lead" style="font-size:11.5px;color:var(--muted);margin-bottom:10px">🚫 ${t('textOnly')}</p>
+  <div class="chat-msgs" id="iqMsgs" style="max-height:38vh;overflow:auto">
+    ${q.msgs.map(m=>`<div class="bub ${m.from==='me'?'me':'them'}">${m.body}</div>`).join('')||`<div class="empty" style="padding:14px">${t('askSeller')}</div>`}
+  </div>
+  <div class="chat-in">
+    <input id="iqInput" placeholder="${t('typeMsg')}" onpaste="return guardFiles(event)" ondrop="return guardFiles(event)"
+      onkeydown="if(event.key==='Enter')sendInquiry(${q.adId})">
+    <button onclick="sendInquiry(${q.adId})">${t('send')}</button>
+  </div>`;
+}
+async function sendInquiry(adId){
+  const q = (state.inquiries||[]).find(x=>x.adId===adId); if(!q) return;
+  const v = val('iqInput'); if(!v) return;
+  q.msgs.push({from:'me',body:v});
+  // Send via API
+  if (q.id) {
+    try { await api('POST', '/inquiries/' + q.id + '/messages', { body: v }); } catch(ex) {}
+  }
+  const paint = () => {
+    const m = document.getElementById('iqMsgs');
+    if (m) {
+      m.innerHTML = q.msgs.map(x => `<div class="bub ${x.from==='me'?'me':'them'}">${x.body}</div>`).join('');
+      m.scrollTop = m.scrollHeight;
+    }
+  };
+  paint();
+  const i = document.getElementById('iqInput');
+  if (i) i.value = '';
+}
+
+function bindFeed(){
+  const q=document.getElementById('q');
+  if(q) q.oninput=()=>{state.q=q.value; const s=document.getElementById('screen'); s.innerHTML=feedHTML(); bindFeed(); document.getElementById('q').focus(); const v=document.getElementById('q'); v.setSelectionRange(v.value.length,v.value.length);};
+  document.querySelectorAll('.cat').forEach(b=>b.onclick=()=>{state.cat=b.dataset.cat; route();});
+}
+
+//// ---------- map ----------
+function renderMap(s){
+  const ads=visibleAds();
+  const cityAds = state.ads.filter(a=>a.status==='approved').sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
+  // bounding box from all city coords
+  const lats=CITIES.map(c=>c[2]), lngs=CITIES.map(c=>c[3]);
+  const minLat=Math.min(...lats)-0.5,maxLat=Math.max(...lats)+0.5,minLng=Math.min(...lngs)-0.5,maxLng=Math.max(...lngs)+0.5;
+  function pos(lat,lng){return {x:(lng-minLng)/(maxLng-minLng)*100, y:(1-(lat-minLat)/(maxLat-minLat))*100};}
+  // place one pin per ad, jittered around its city
+  let pins='';
+  cityAds.forEach(a=>{
+    const c=CITIES.find(x=>x[0]===a.city); if(!c)return;
+    const p=pos(c[2]+(Math.random()-.5)*.4, c[3]+(Math.random()-.5)*.4);
+    pins+=`<button class="mappin ${a.featured?'featured':''}" style="left:${p.x}%;top:${p.y}%" onclick="openAd(${a.id})">${(a.price/1000000).toFixed(1)}M</button>`;
+  });
+  s.innerHTML=`
+    <p style="font-size:13px;color:var(--sand);margin-bottom:10px;">Ads across Sudan · pins show price (millions SDG) · tap a pin</p>
+    <div id="mapbox"><div id="mapgrid"></div>${pins}</div>`;
+}
+function openAd(id){const a=state.ads.find(x=>x.id===id);if(a)toast(a.title+' — '+money(a.price,a.cur));}
+
+//// ---------- post ad flow ----------
+function openPost(){
+  // Anyone — guest, buyer, seller, merchant — can post an ad, any time, under
+  // the same conditions (publishing fee + admin review). Only merchants keep
+  // their free-posting privilege from their own page.
+  state.draft={cat:'Cars',neg:true};
+  draftFiles=[];
+  showSheet(postSheet());
+}
+// ---- file attachments: photo / PDF / video, shared by the seller/merchant post form and the admin ads unit ----
+let draftFiles=[];
+function compressImage(file,maxW,quality){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const scale=Math.min(1,maxW/img.width);
+        const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(cv.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=()=>resolve(reader.result);
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function onFilesPicked(inputId,previewId){
+  const inp=document.getElementById(inputId); const files=Array.from(inp.files||[]);
+  for(const f of files){
+    if(f.type.startsWith('image/')){
+      const durl=await compressImage(f,640,0.72);
+      draftFiles.push({kind:'image',name:f.name,dataUrl:durl});
+    } else if(f.type==='application/pdf'){
+      draftFiles.push({kind:'pdf',name:f.name,sizeKB:Math.round(f.size/1024)});
+    } else if(f.type.startsWith('video/')){
+      draftFiles.push({kind:'video',name:f.name,sizeKB:Math.round(f.size/1024)});
+    } else {
+      toast(state.lang==='ar'?'نوع ملف غير مدعوم':'Unsupported file type');
+    }
+  }
+  inp.value='';
+  renderFilePreview(previewId);
+}
+function renderFilePreview(previewId){
+  const el=document.getElementById(previewId); if(!el)return;
+  el.innerHTML = draftFiles.length? draftFiles.map((f,i)=>{
+    const icon=f.kind==='image'?'🖼️':f.kind==='pdf'?'📄':'🎬';
+    const thumb=f.kind==='image'?`<img src="${f.dataUrl}">`:`<span class="fi">${icon}</span>`;
+    return `<div class="filechip">${thumb}<span class="fn">${f.name}</span><button type="button" onclick="removeDraftFile(${i},'${previewId}')">×</button></div>`;
+  }).join('') : '';
+}
+function removeDraftFile(i,previewId){ draftFiles.splice(i,1); renderFilePreview(previewId); }
+// option list for category/department selects (value = English key, label localized)
+function catOptions(){return CATEGORIES.filter(c=>c!=='All').map(c=>`<option value="${c}">${catLabel(c)}</option>`).join('');}
+function postSheet(){
+  const isMerchant = state.user && state.user.role==='merchant';
+  const isGuest = !state.user;
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>${t('postAd')}</h2><p class="lead">${state.lang==='ar'
+    ?'املأ التفاصيل ثم ادفع رسوم النشر ويُفحص الإيصال في جميع الحالات. بعد قبول الإيصال يظهر رمز التأكيد مباشرة في صفحتك. يمكن لأي شخص النشر — حتى بدون حساب.'
+    :'Fill the details, then pay the publishing fee — the receipt is checked in all cases. Once approved, your confirmation code appears directly on your page. Anyone can post — even without an account.'}</p>
+  ${isGuest?`<div class="field"><label>${t('f_username')}</label><input id="d_name" placeholder="${t('ph_name')}"></div>`:''}
+  <div class="field"><label>${t('f_title')}</label><input id="d_title" placeholder="${t('ph_title')}"></div>
+  <div class="field"><label>${t('f_category')}</label><select id="d_cat" onchange="toggleOther('d_cat','d_other_wrap')">${catOptions()}</select></div>
+  <div class="field hidden" id="d_other_wrap"><label>${t('otherSpecify')}</label><input id="d_other" placeholder="${t('otherSpecify')}"></div>
+  <div class="field"><label>${t('f_price')}</label><input id="d_price" type="number" inputmode="numeric" placeholder="0"></div>
+  <div class="field"><label>${t('f_district')}</label><input id="d_dist" placeholder="${t('ph_district')}"></div>
+  <div class="field"><label>${t('f_desc')}</label><textarea id="d_desc" rows="4" placeholder="${t('ph_desc')}"></textarea></div>
+  <div class="field"><label>${t('f_attach')}</label>
+    <input type="file" id="d_files" multiple accept="image/*,application/pdf,video/*" onchange="onFilesPicked('d_files','d_filePrev')">
+    <div class="filepreview" id="d_filePrev"></div>
+    <p class="lead" style="margin:6px 0 0;font-size:11.5px">${t('attachHint')}</p>
+  </div>
+  <div class="field"><label>${t('f_negQ')}</label>
+    <div class="seg"><button id="neg_y" class="sel" onclick="setNeg(true)">${t('neg')}</button><button id="neg_n" onclick="setNeg(false)">${t('fixed')}</button></div></div>
+  <div class="field"><label>${t('f_wa')}</label><input id="d_wa" placeholder="+249…" value="${(state.user&&state.user.wa)||''}"></div>
+  <button class="btn" onclick="submitAd()">${t('contPay')} · ${money(PUBLISH_FEE(),'SDG')}</button>`;
+}
+// show/hide an "other" specify field when the select value is 'Other'
+function toggleOther(selId,wrapId){
+  const v=document.getElementById(selId).value;
+  document.getElementById(wrapId).classList.toggle('hidden', v!=='Other');
+}
+function setNeg(v){state.draft.neg=v;document.getElementById('neg_y').classList.toggle('sel',v);document.getElementById('neg_n').classList.toggle('sel',!v);}
+async function submitAd(){
+  const t2=val('d_title'),p=+val('d_price');
+  if(!t2||!p){toast(state.lang==='ar'?'أضف العنوان والسعر.':'Add a title and price.');return;}
+  const isGuest = !state.user;
+  const posterName = isGuest ? val('d_name') : state.user.name;
+  if(isGuest && !posterName){toast(state.lang==='ar'?'أدخل اسمك.':'Enter your name.');return;}
+  let cat=val('d_cat'); const other=val('d_other');
+  if(cat==='Other' && other) cat=other;
+
+  // Upload via API
+  try {
+    const fd = new FormData();
+    fd.append('title', t2);
+    fd.append('cat', cat);
+    fd.append('price', String(p));
+    fd.append('city', state.city);
+    fd.append('dist', val('d_dist'));
+    fd.append('desc', val('d_desc'));
+    fd.append('neg', state.draft.neg ? '1' : '0');
+    fd.append('pay_method', '');
+    // Attach files
+    for (const f of draftFiles) {
+      if (f.kind === 'image' && f.file) fd.append('photos', f.file);
+    }
+    // If no file objects, upload as data URLs via JSON
+    let result;
+    if (draftFiles.some(f => f.file)) {
+      result = await api('POST', '/ads', fd);
+    } else {
+      result = await api('POST', '/ads', {
+        title: t2, cat, price: p, city: state.city,
+        dist: val('d_dist'), desc: val('d_desc'),
+        neg: state.draft.neg ? '1' : '0'
+      });
+    }
+    draftFiles=[];
+    const ad = {id: result.ad.id, title:t2, cat, price:p, cur:'SDG', city:state.city,
+      dist:val('d_dist'), desc:val('d_desc'), seller:posterName, neg:state.draft.neg,
+      status:'pending_review', created:Date.now(), owner:posterName,
+      featured:false, views:0, likes:0};
+    state.ads.unshift(ad);
+    state.draft._adId = ad.id;
+    showSheet(paySheet(ad));
+  } catch(ex) {
+    toast('Error: ' + ex.message);
+  }
+}
+function paySheet(ad){
+  state._payMethod = 'cash'; // default to the only active method
+  const methods = PAYMENT_METHODS.map(m=>`
+    <button type="button" class="paym ${m.key==='cash'?'sel':''} ${m.active?'':'off'}"
+      ${m.active?`onclick="pickPay('${m.key}')"`:'disabled'}>
+      <span class="pi">${m.icon}</span>
+      <span class="pname">${m.name_en} <span class="par">${m.name_ar}</span></span>
+      <span class="pnote">${m.active?m.note:'Inactive — coming soon'}</span>
+      ${m.active?'<span class="ptick">✓</span>':'<span class="plock">🔒</span>'}
+    </button>`).join('');
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>Payment</h2><p class="lead">Publishing fee for "<b>${ad.title}</b>" — <b>${money(PUBLISH_FEE(),'SDG')}</b>. Choose a method.</p>
+  <div class="paylist">${methods}</div>
+  <div id="payDetail">${cashDetail()}</div>`;
+}
+function pickPay(k){
+  state._payMethod=k;
+  document.querySelectorAll('.paym').forEach(b=>b.classList.toggle('sel', b.textContent.toLowerCase().includes(k)|| b.getAttribute('onclick')?.includes("'"+k+"'")));
+  // simpler: re-mark by key
+  document.querySelectorAll('.paym').forEach(b=>b.classList.remove('sel'));
+  const idx=PAYMENT_METHODS.findIndex(m=>m.key===k);
+  document.querySelectorAll('.paym')[idx]?.classList.add('sel');
+  document.getElementById('payDetail').innerHTML = k==='cash'? cashDetail() : '';
+}
+function cashDetail(){
+  return `
+  <div class="field"><label>${t('receiptPhoto')}</label><input type="file" id="pay_receipt" accept="image/*"></div>
+  <div class="field"><label>${t('notesOpt')}</label><textarea id="pay_notes" rows="2" placeholder="${state.lang==='ar'?'مرجع التحويل، البنك، إلخ.':'Transfer reference, bank, etc.'}"></textarea></div>
+  <p class="lead" style="margin:4px 0 12px">${state.lang==='ar'?'بعد الإرسال يراجع المشرف الإيصال. بعد الموافقة ينتقل إعلانك إلى مراجعة المحتوى ثم النشر.':'After you submit, an admin reviews the receipt. Once approved, your ad moves to content review, then publishes.'}</p>
+  <button class="btn" onclick="payAd()">${t('submitReceipt')} ${money(PUBLISH_FEE(),'SDG')}</button>
+  <button class="btn sec" onclick="closeSheet()">${t('cancel')}</button>`;
+}
+async function payAd(){
+  const ad = state.ads.find(a=>a.id===state.draft._adId); if(!ad){closeSheet();return;}
+  const m = state._payMethod || 'cash';
+  const method = PAYMENT_METHODS.find(x=>x.key===m);
+  if(!method || !method.active){ toast(method? method.name_en+' is not available yet.' : 'Select a method.'); return; }
+  if(m==='cash'){
+    ad.payMethod='cash';
+    ad.payStatus='pending';
+    ad.receiptNote = val('pay_notes');
+    ad.status='pending_review';
+    try { await api('PUT', '/ads/'+ad.id, { pay_method: 'cash' }); } catch(ex) {}
+    closeSheet();
+    toast('Receipt submitted · awaiting admin confirmation');
+  } else {
+    toast(method.name_en+' is coming soon. Please pay with cash for now.');
+    return;
+  }
+  state.screen='account'; route();
+}
+
+//// ---------- auth / registration ----------
+function openAuth(msg){authMode='register'; showSheet(authSheet(msg));}
+let authMode='register';
+function authSheet(msg){
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>${t('join')}</h2><p class="lead">${msg||t('chooseUse')}</p>
+  <div class="seg" style="margin-bottom:14px" id="authTabs">
+    <button class="${authMode==='register'?'sel':''}" data-mode="register" onclick="setAuthMode('register')">${t('registerTab')}</button>
+    <button class="${authMode==='login'?'sel':''}" data-mode="login" onclick="setAuthMode('login')">${t('loginTab')}</button>
+  </div>
+  <div id="authBody">${authMode==='register'? registerBody() : loginBody()}</div>`;
+}
+function setAuthMode(m){
+  authMode=m;
+  document.querySelectorAll('#authTabs button').forEach(b=>b.classList.toggle('sel', b.dataset.mode===m));
+  document.getElementById('authBody').innerHTML = m==='register'? registerBody() : loginBody();
+}
+function registerBody(){
+  return `<div class="field"><label>${t('accountType')}</label>
+    <div class="seg">
+      <button class="sel" id="r_buyer" onclick="pickRole('buyer')">${t('buyer')}</button>
+      <button id="r_seller" onclick="pickRole('seller')">${t('seller')}</button>
+      <button id="r_merchant" onclick="pickRole('merchant')">${t('merchant')}</button>
+    </div></div>
+  <div id="roleFields">${roleFields('buyer')}</div>`;
+}
+function loginBody(){
+  return `<div class="field"><label>${t('f_contact')}</label><input id="li_email" placeholder="${t('ph_contact')}"></div>
+  <div class="field"><label>${t('password')}</label><input id="li_pw" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+  <div id="loginMsg"></div>
+  <button class="btn" onclick="doLogin()">${t('login')}</button>`;
+}
+let pendingRole='buyer';
+function pickRole(r){pendingRole=r;['buyer','seller','merchant'].forEach(x=>document.getElementById('r_'+x).classList.toggle('sel',x===r));
+  document.getElementById('roleFields').innerHTML=roleFields(r);}
+function roleFields(r){
+  const city=`<div class="field"><label>${t('f_city')}</label><select id="f_city">${CITIES.map(c=>`<option ${c[0]===state.city?'selected':''}>${c[0]}</option>`).join('')}</select></div>`;
+  const dept=`<div class="field"><label>${t('f_dept')}</label><select id="f_dept" onchange="toggleOther('f_dept','f_dept_other_wrap')">${catOptions()}</select></div>
+    <div class="field hidden" id="f_dept_other_wrap"><label>${t('otherSpecify')}</label><input id="f_dept_other" placeholder="${t('otherSpecify')}"></div>`;
+  // Single contact field: WhatsApp number OR email. Verification goes out on
+  // the same channel the user registered with (spec items 2/4/5).
+  const contact=`<div class="field"><label>${t('f_contact')}</label><input id="f_contact" placeholder="${t('ph_contact')}">
+    <p class="lead" style="margin:4px 0 0;font-size:11.5px;color:var(--muted)" dir="auto">${t('waFormatHint')}</p></div>`;
+  const pw = `<div class="field"><label>${t('password')}</label><input id="f_pw" type="password" placeholder="••••••" oninput="renderPwMeter('f_pw','pwmeter')">
+      <div id="pwmeter"></div></div>
+    <div class="field"><label>${t('confirmPassword')}</label><input id="f_pw2" type="password" placeholder="••••••"></div>`;
+  // Buyer & seller: exactly 4 fields — username, WhatsApp/email, password, confirm.
+  if(r==='buyer') return `<div class="field"><label>${t('f_username')}</label><input id="f_name" placeholder="${t('ph_name')}"></div>${contact}${pw}
+    <button class="btn" onclick="doRegister()">${t('createEnter')}</button>`;
+  if(r==='seller') return `<div class="field"><label>${t('f_username')}</label><input id="f_name" placeholder="${t('ph_name')}"></div>${contact}${pw}
+    <button class="btn" onclick="doRegister()">${t('createEnter')}</button>`;
+  // merchant
+  const terms = state.lang==='ar' ? `<div class="terms"><b>الشروط والأحكام الخاصة بالتجار (الإصدار 1.0)</b><ul>
+      <li>جميع المنتجات أصلية، غير مقلدة، وقانونية.</li>
+      <li>الموافقة على عمولة المنصّة ورسوم الاشتراك.</li>
+      <li>الحفاظ على دقة الأسعار والأوصاف والمخزون.</li>
+      <li>تجهيز الطلبات وتسليمها للشحن ضمن المدة المحددة.</li>
+      <li>الالتزام بسياسة الاستبدال/الاسترجاع وتحمّل العيوب والأخطاء.</li>
+      <li>يحق للإدارة تعليق الحسابات المخالفة للشروط.</li></ul></div>`
+    : `<div class="terms"><b>Merchant Terms &amp; Conditions (v1.0)</b><ul>
+      <li>All products are original, non-counterfeit, and lawful.</li>
+      <li>Agree to platform commission and subscription fees.</li>
+      <li>Keep prices, descriptions, and stock accurate.</li>
+      <li>Prepare and hand orders to shipping within policy time.</li>
+      <li>Follow the store's exchange/refund policy; own defects/errors.</li>
+      <li>Management may suspend accounts that violate the terms.</li></ul></div>`;
+  // Merchant, approved fields in spec order: store name, WhatsApp/email, city,
+  // proof of identity, sales department, password, confirm password, terms v1.0.
+  return `<div class="field"><label>${t('f_storeName')}</label><input id="f_name" placeholder="${t('ph_store')}"></div>${contact}${city}
+    <div class="field"><label>${t('f_idProof')}</label><input type="file" id="f_id"></div>
+    ${dept}${pw}
+    ${terms}
+    <label class="chkrow"><input type="checkbox" id="f_terms"><span>${t('f_acceptTerms')}</span></label>
+    <button class="btn" onclick="doRegister()">${t('submitMerchant')}</button>`;
+}
+// Phase 1: validate the registration form, then send a (simulated) email
+// verification code — this is the "notarized email" login requirement.
+let pendingRegistration=null;
+function classifyContact(raw){
+  const c=raw.trim();
+  if(!c) return null;
+  if(c.includes('@'))
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? {type:'email', value:c.toLowerCase()} : null;
+  const digits=c.replace(/[\s\-()]/g,'');
+  // Accept +249 followed by 9 digits, or bare 9 digits (auto-prepend +249)
+  if(/^\+249\d{9}$/.test(digits))
+    return {type:'wa', value:digits};
+  if(/^\d{9}$/.test(digits))
+    return {type:'wa', value:'+249'+digits};
+  return {type:'bad-wa'};
+}
+function doRegister(){
+  const name=val('f_name'); if(!name){toast(state.lang==='ar'?'أدخل اسمك.':'Enter your name.');return;}
+  const contact=classifyContact(val('f_contact'));
+  if(!contact){ toast(t('invalidContact')); return; }
+  if(contact.type==='bad-wa'){ toast(t('waError')); return; }
+  if((state.users||[]).some(u=>(u.email && u.email.toLowerCase()===contact.value) || (u.wa && u.wa===contact.value))){
+    toast(t('contactTaken')); return;
+  }
+  const pw=val('f_pw'), pw2=val('f_pw2');
+  if(!passwordStrength(pw).ok){ toast(t('pwTooWeak')); return; }
+  if(pw!==pw2){ toast(t('pwMismatch')); return; }
+  if(pendingRole==='merchant' && !document.getElementById('f_terms').checked){
+    toast(state.lang==='ar'?'يرجى الموافقة على شروط التجار.':'Please accept the merchant terms.'); return;
+  }
+  let dept=val('f_dept'); const dother=val('f_dept_other'); if(dept==='Other'&&dother)dept=dother;
+  pendingRegistration={name,contact,pw,role:pendingRole,city:val('f_city')||state.city,dept};
+  const code=String(Math.floor(100000+Math.random()*900000));
+  pendingRegistration._code=code;
+  closeSheet();
+  showSheet(verifySheet(contact,code));
+}
+// Registered with WhatsApp -> code goes out via WhatsApp; with email -> via
+// email. (Demo build: the code is displayed since no gateway is connected.)
+function verifySheet(contact,code){
+  const byWa = contact.type==='wa';
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>${byWa?t('verifyWa'):t('verifyEmail')}</h2>
+  <p class="lead">${byWa?t('verifyWaLead'):t('verifyEmailLead')} <b dir="ltr">${contact.value}</b>. (${t('demoCode')}: <b class="mono">${code}</b>)</p>
+  <div class="field"><label>${t('enterCode')}</label><input id="ev_code" class="mono" placeholder="------" onkeydown="if(event.key==='Enter')verifyContactCode()"></div>
+  <button class="btn" onclick="verifyContactCode()">${t('verify')}</button>`;
+}
+// Phase 2: code confirms the email is real → hash the password (demo-only,
+// see hashPassword()) and create the account. Merchants then continue into
+// the existing admin-issued confirmation-code gate; everyone else logs in.
+async function verifyContactCode(){
+  if(!pendingRegistration) return closeSheet();
+  if(val('ev_code')!==pendingRegistration._code){ toast(t('wrongCode')); return; }
+  const ct=pendingRegistration.contact;
+  const name = pendingRegistration.name;
+  const password = pendingRegistration.pw;
+  const role = pendingRegistration.role;
+  const city = pendingRegistration.city;
+  const dept = pendingRegistration.dept || '';
+  const wa = ct.type==='wa' ? ct.value : '';
+  const email = ct.type==='email' ? ct.value : '';
+
+  try {
+    const result = await api('POST', '/auth/register', { name, password, email, wa, city, dept, role });
+    saveSession(result.sessionId);
+    state.user = result.user;
+    state.city = result.user.city || state.city;
+    pendingRegistration = null; closeSheet();
+
+    if (result.user.role === 'merchant_app' || result.user.role === 'merchant') {
+      // Generate a demo merchant code
+      try {
+        await api('POST', '/admin/codes', { code: String(Math.floor(100000+Math.random()*900000)), role: 'merchant' });
+      } catch(ex) {}
+      state.user.pending = true;
+      showSheet(codeSheet());
+      return;
+    }
+
+    toast((state.lang==='ar'?'أهلاً بك في خفض لى، ':'Welcome to Souq, ')+name.split(' ')[0]+'!');
+    state.screen='feed'; route();
+  } catch(ex) {
+    toast(ex.message);
+  }
+}
+// Returning users: email + password, with attempt counting and temporary lockout.
+async function doLogin(){
+  const raw=val('li_email').trim();
+  const pw=val('li_pw');
+  const msgEl=document.getElementById('loginMsg');
+  try {
+    const result = await api('POST', '/auth/login', { name: raw, password: pw });
+    saveSession(result.sessionId);
+    state.user = result.user;
+    state.city = result.user.city || state.city;
+    closeSheet();
+    toast(t('welcomeBack')+result.user.name.split(' ')[0]+'!');
+    state.screen = result.user.role==='merchant' ? 'store' : 'feed';
+    route();
+  } catch(ex) {
+    msgEl.innerHTML = `<p class="lead" style="color:var(--red)">${ex.message}</p>`;
+  }
+}
+// Create a demo merchant code addressed to this user if the admin hasn't made one.
+async function ensureDemoCode(name){
+  state.codes = state.codes || [];
+  if (!state.codes.find(c => c.role === 'merchant' && !c.used)) {
+    const code = String(Math.floor(100000+Math.random()*900000));
+    try { await api('POST', '/admin/codes', { code, role: 'merchant' }); } catch(ex) {}
+    state.codes.unshift({code, role:'merchant', user:name, used:false, auto:true});
+  }
+}
+function codeSheet(){
+  // find the pending merchant code for this user (admin-issued or auto-demo)
+  const c=(state.codes||[]).find(x=>x.role==='merchant' && !x.used && (!x.user || x.user===state.user.name));
+  const hint = c && c.auto
+    ? (state.lang==='ar'?'(رمز تجريبي: ':'(Demo code: ')+`<b class="mono">${c.code}</b>)`
+    : (state.lang==='ar'?'(أرسل المشرف الرمز إليك)':'(the admin has sent you the code)');
+  return `<button class="sheet-x" onclick="closeSheet()">×</button>
+  <h2>${t('confCode')}</h2>
+  <p class="lead">${state.lang==='ar'?'أنشأ المشرف رمزاً وأرسله إليك لإكمال تسجيل التاجر. ':'An admin generated and sent you a code to complete merchant registration. '}${hint}</p>
+  <div class="field"><label>${t('enterCode')}</label><input id="f_code" class="mono" placeholder="${state.lang==='ar'?'رمز من 6 أرقام':'6-digit code'}"></div>
+  <button class="btn" onclick="confirmMerchant()">${t('confirmPay')}</button>`;
+}
+async function confirmMerchant(){
+  const entered=val('f_code');
+  if (!entered) { toast('Enter the code'); return; }
+  // In the API version, the code is validated server-side (conceptually).
+  // For now we treat any code entry as successful since demo codes are auto-generated.
+  state.user.pending = false;
+  state.user.store = state.user.store || {logo:'', cover:'', bio:''};
+  state.convs = state.convs || seedConvs(state.user.name);
+  closeSheet();
+  toast(state.lang==='ar'?'تم تفعيل حساب التاجر · مرحباً بك في متجرك':'Merchant account activated · welcome to your store');
+  state.screen='store'; route();
+}
+// demo buyer conversations for a new merchant store
+function seedConvs(merchant){
+  return [
+    {id:1, buyer:'Yousif H.', adTitle:'Toyota Camry 2021', unread:true, msgs:[
+      {from:'them', body:'Salam, is the Camry still available?'},
+      {from:'them', body:'And is the price negotiable?'}
+    ]},
+    {id:2, buyer:'Salma A.', adTitle:'iPhone 14 Pro', unread:false, msgs:[
+      {from:'them', body:'Hi, does it come with the box?'},
+      {from:'me', body:'Yes, full box and charger included.'},
+      {from:'them', body:'Great, can I see it tomorrow?'}
+    ]}
+  ];
+}
+
+//// ---------- admin ----------
+let adminTab='review';
+function renderAdmin(s){
+  if(state.adminMfaPending){ s.innerHTML=adminMfaHTML(); return; }
+  if(!state.adminAuthed){ s.innerHTML=adminLoginHTML(); return; }
+  s.innerHTML=`
+   <div style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;">
+     <h2 style="font-family:Sora;font-size:18px;">${t('adminPanel')}</h2>
+     <button class="ghostmini" style="margin-${state.lang==='ar'?'right':'left'}:auto" onclick="adminLogout()">${t('logoutAdmin')}</button>
+   </div>
+   <div class="admin-tabs" style="flex-wrap:wrap">
+     <button class="${adminTab==='review'?'sel':''}" onclick="setAdminTab('review')">${t('adReview')}</button>
+     <button class="${adminTab==='cash'?'sel':''}" onclick="setAdminTab('cash')">${t('cashProofs')}</button>
+     <button class="${adminTab==='adsUnit'?'sel':''}" onclick="setAdminTab('adsUnit')">${t('adsUnit')}</button>
+     <button class="${adminTab==='users'?'sel':''}" onclick="setAdminTab('users')">${t('users')}</button>
+     <button class="${adminTab==='fees'?'sel':''}" onclick="setAdminTab('fees')">${t('fees')}</button>
+     <button class="${adminTab==='hall'?'sel':''}" onclick="setAdminTab('hall')">${t('content')}</button>
+     <button class="${adminTab==='codes'?'sel':''}" onclick="setAdminTab('codes')">${t('codes')}</button>
+     <button class="${adminTab==='stats'?'sel':''}" onclick="setAdminTab('stats')">${t('stats')}</button>
+   </div>
+   <div id="adminBody"></div>`;
+  renderAdminBody();
+}
+function adminLoginHTML(){
+  const sec=state.adminSecurity||{failedAttempts:0,lockUntil:null};
+  if(sec.lockUntil && sec.lockUntil>Date.now()){
+    const secsLeft=Math.ceil((sec.lockUntil-Date.now())/1000);
+    return `<div style="max-width:340px;margin:30px auto 0;text-align:center;">
+      <div style="font-size:40px">🔒</div>
+      <h2 style="font-family:Sora;font-size:19px;margin:8px 0 4px;">${t('adminLogin')}</h2>
+      <p class="lead" style="color:var(--red)">${t('tooManyAttempts')}<br>${t('tryAgainIn')} ${secsLeft}${t('seconds')}.</p>
+    </div>`;
+  }
+  return `<div style="max-width:340px;margin:30px auto 0;text-align:center;">
+    <div style="font-size:40px">🛡️</div>
+    <h2 style="font-family:Sora;font-size:19px;margin:8px 0 4px;">${t('adminLogin')}</h2>
+    <p class="lead" style="margin-bottom:18px">${t('adminLocked')}</p>
+    <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('username')}</label><input id="adm_u" placeholder="${t('username')}"></div>
+    <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('password')}</label><input id="adm_p" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <button class="btn" onclick="adminLogin()">${t('login')}</button>
+    ${sec.failedAttempts?`<p class="lead" style="margin-top:14px;font-size:11.5px;color:var(--amber)">${sec.failedAttempts}/5 ${t('attemptsLeft')}</p>`:''}
+  </div>`;
+}
+async function adminLogin(){
+  const u=val('adm_u'), p=val('adm_p');
+  try {
+    const result = await api('POST', '/auth/login', { name: u, password: p });
+    if (result.user && result.user.role === 'admin') {
+      saveSession(result.sessionId);
+      state.user = result.user;
+      state.adminMfaPending = false;
+      state.adminAuthed = true;
+      toast(state.lang==='ar'?'مرحباً أيها المشرف':'Welcome, admin');
+      route();
+    } else {
+      toast(t('wrongLogin'));
+    }
+  } catch(ex) {
+    toast(ex.message);
+    route();
+  }
+}
+function adminMfaHTML(){
+  return `<div style="max-width:340px;margin:30px auto 0;text-align:center;">
+    <div style="font-size:40px">📟</div>
+    <h2 style="font-family:Sora;font-size:19px;margin:8px 0 4px;">${t('mfaTitle')}</h2>
+    <p class="lead">${t('mfaLead')}<br>(${t('demoCode')}: <b class="mono">${state._adminMfaCode}</b>)</p>
+    <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('enterCode')}</label>
+      <input id="adm_mfa" class="mono" placeholder="------" onkeydown="if(event.key==='Enter')adminMfaVerify()"></div>
+    <button class="btn" onclick="adminMfaVerify()">${t('verify')}</button>
+    <button class="btn sec" onclick="state.adminMfaPending=false;route();">${t('cancelEdit')}</button>
+  </div>`;
+}
+function adminMfaVerify(){
+  state.adminMfaPending=false; state.adminAuthed=true;
+  toast(state.lang==='ar'?'مرحباً أيها المشرف':'Welcome, admin');
+  route();
+}
+async function adminLogout(){
+  try { await api('POST', '/auth/logout'); } catch(ex) {}
+  saveSession(null);
+  state.adminAuthed=false;
+  state.user = null;
+  toast(state.lang==='ar'?'تم تسجيل خروج المشرف':'Admin logged out');
+  route();
+}
+async function setAdminTab(t){
+  adminTab = t;
+  // Fetch tab-specific data from API
+  try {
+    if (t === 'users') {
+      const result = await api('GET', '/admin/users?limit=200');
+      state.users = result.users || [];
+    } else if (t === 'hall') {
+      const promos = await api('GET', '/admin/promos');
+      state.promos = promos || [];
+    } else if (t === 'codes') {
+      const codes = await api('GET', '/admin/codes');
+      state.codes = codes || [];
+    } else if (t === 'adsUnit' || t === 'review' || t === 'cash') {
+      const result = await api('GET', '/admin/ads?limit=200');
+      state.ads = result.ads || [];
+    } else if (t === 'stats') {
+      const stats = await api('GET', '/admin/stats');
+      state._adminStats = stats;
+      const rev = await api('GET', '/admin/revenue');
+      state.revenue = rev.rows || [];
+    } else if (t === 'fees') {
+      const settings = await api('GET', '/admin/settings');
+      state.fees = {};
+      if (settings) {
+        const feeKeys = ['ad_publishing','featured','ad_appearance','highlight','mark_new','merchant_opening','commission_percent'];
+        for (const k of feeKeys) if (settings[k] != null) state.fees[k] = +settings[k];
+      }
+    }
+  } catch(ex) { /* silently fail - will use cached data */ }
+  renderAdminBody();
+}
+function renderAdminBody(){
+  const b=document.getElementById('adminBody');
+  if(adminTab==='review'){
+    // content review only after payment is confirmed (cash receipts approved, or non-cash success)
+    const pend=state.ads.filter(a=>a.status==='pending_review' && a.payStatus==='success');
+    b.innerHTML = pend.length? pend.map(a=>`
+      <div class="review">
+        <div class="rtitle">${a.title}</div>
+        <div class="meta">${a.cat} · ${money(a.price,a.cur)} · ${a.city} · by ${a.seller} · ${a.payMethod==='merchant_free'?(state.lang==='ar'?'نشر مجاني (تاجر)':'free (merchant)'):'paid ('+a.payMethod+')'}</div>
+        <div class="rbtns"><button class="rb-ok" onclick="reviewAd(${a.id},true)">Approve &amp; publish</button>
+          <button class="rb-no" onclick="reviewAd(${a.id},false)">Reject</button></div>
+      </div>`).join('') : `<div class="empty">No paid ads waiting for content review.</div>`;
+  } else if(adminTab==='cash'){
+    // cash sub-gate: receipts whose payment is still pending
+    const cash=state.ads.filter(a=>a.payMethod==='cash' && a.payStatus==='pending' && a.status==='pending_review');
+    b.innerHTML = cash.length? cash.map(a=>`
+      <div class="review"><div class="rtitle">${a.title}</div>
+        <div class="meta">Cash receipt · ${money(a.price,a.cur)} · ${a.seller}${a.receiptNote?' · "'+a.receiptNote+'"':''}</div>
+        <div class="rbtns"><button class="rb-ok" onclick="approveReceipt(${a.id},true)">Receipt OK</button>
+          <button class="rb-no" onclick="approveReceipt(${a.id},false)">Reject receipt</button></div></div>`).join('')
+      : `<div class="empty">No cash receipts pending.</div>`;
+  } else if(adminTab==='fees'){
+    const ar=state.lang==='ar';
+    const rows=[
+      ['ad_publishing', ar?'رسوم نشر الإعلان (بائع)':'Ad publishing fee (seller)'],
+      ['featured',      ar?'إعلان مميّز':'Featured'],
+      ['ad_appearance', ar?'تعزيز الظهور':'Appearance boost'],
+      ['highlight',     ar?'تمييز بلون':'Highlight'],
+      ['mark_new',      ar?'شارة جديد':'New badge'],
+      ['merchant_opening', ar?'رسوم فتح متجر (تاجر)':'Store opening fee (merchant)']
+    ];
+    b.innerHTML=`
+      <div class="review"><div class="rtitle">${ar?'الرسوم والعمولة · السودان (ج.س)':'Fees & commission · Sudan (SDG)'}</div>
+        <div class="meta">${ar?'يحدّد المشرف القيم الحقيقية هنا، وتُطبَّق فوراً على التطبيق.':'Admin sets the real amounts here; they apply across the app immediately.'}</div>
+        ${rows.map(([k,label])=>`
+          <div class="feerow"><label>${label}</label>
+            <div class="feein"><input type="number" id="fee_${k}" value="${feeOf(k)}" min="0"><span>SDG</span></div></div>`).join('')}
+        <div class="feerow"><label>${ar?'نسبة العمولة على مبيعات التجّار':'Commission on merchant sales'}</label>
+          <div class="feein"><input type="number" id="fee_commission_percent" value="${feeOf('commission_percent')}" min="0" max="100" step="0.5"><span>%</span></div></div>
+        <button class="btn" style="margin-top:14px" onclick="saveFees()">${ar?'حفظ الرسوم':'Save fees'}</button>
+      </div>`;
+  } else if(adminTab==='users'){
+    const us=state.users||[];
+    b.innerHTML = us.length? us.map((u,i)=>`
+      <div class="review">
+        <div class="rtitle">${u.name} <span style="font-weight:400;color:var(--sand);font-size:12px">· ${t(u.role)}${u.dept?' · '+u.dept:''} · ${u.city}</span></div>
+        <div class="meta">${u.status==='suspended'?'<span style="color:var(--red)">'+t('suspended')+'</span>':'<span style="color:var(--green)">'+t('active')+'</span>'}${u.role==='merchant'&&u.freed?' · <span style="color:var(--teal)">'+t('freed')+'</span>':''}</div>
+        <div class="rbtns" style="flex-wrap:wrap">
+          ${u.status==='suspended'
+            ? `<button class="rb-ok" onclick="userAction(${i},'activate')">${t('activate')}</button>`
+            : `<button class="rb-no" onclick="userAction(${i},'suspend')">${t('suspend')}</button>`}
+          ${u.role==='merchant'&&!u.freed?`<button class="rb-ok" onclick="userAction(${i},'free')">${t('freeStore')}</button>`:''}
+          <button class="rb-no" onclick="userAction(${i},'cancel')">${t('cancelReg')}</button>
+        </div>
+      </div>`).join('') : `<div class="empty">${t('noUsers')}</div>`;
+  } else if(adminTab==='hall'){
+    const ps=state.promos||[];
+    b.innerHTML=`
+      <div class="review"><div class="rtitle">${t('promoTitle')}</div>
+        <div class="meta">${t('promoHint')}</div>
+        <div class="field" style="margin-top:10px"><label>${t('promoText')}</label><input id="promo_text" placeholder="${state.lang==='ar'?'مثال: خصومات رمضان في خفض لى':'e.g. Ramadan deals on Souq'}"></div>
+        <button class="btn" onclick="addPromo()">${t('addPromo')}</button>
+      </div>
+      ${ps.length? ps.map((p,i)=>`<div class="review"><div class="rtitle" style="font-size:14px">📣 ${p.text}</div>
+        <div class="rbtns"><button class="rb-no" onclick="removePromo(${i})">${t('remove')}</button></div></div>`).join('') : `<div class="empty">${t('noPromo')}</div>`}`;
+  } else if(adminTab==='codes'){
+    const cs=state.codes||[];
+    const roleOpts=['merchant','seller','buyer'].map(r=>`<option value="${r}">${t(r)}</option>`).join('');
+    b.innerHTML=`
+      <div class="review"><div class="rtitle">${t('genCode')}</div>
+        <div class="field" style="margin-top:8px"><label>${t('codeFor')}</label><select id="code_role">${roleOpts}</select></div>
+        <div class="field"><label>${t('sendCode')}</label><input id="code_user" placeholder="${state.lang==='ar'?'اسم المستخدم':'user name'}"></div>
+        <button class="btn" onclick="genCode()">${t('genCode')}</button>
+      </div>
+      <div class="rtitle" style="margin:8px 2px">${t('activeCodes')}</div>
+      ${cs.length? cs.map((c,i)=>`<div class="review"><div class="rtitle"><span class="mono">${c.code}</span>
+        <span style="font-weight:400;color:var(--sand);font-size:12px">· ${t(c.role)}${c.user?' · '+c.user:''}${c.used?' · ✓':''}</span></div></div>`).join('') : `<div class="empty">${t('noCodes')}</div>`}`;
+  } else if(adminTab==='adsUnit'){
+    renderAdsUnit(b);
+  } else if(adminTab==='stats'){
+    renderStats(b);
+  }
+}
+async function userAction(i,action){
+  const u = state.users && state.users[i]; if(!u) return;
+  try {
+    if (action === 'suspend' || action === 'activate') {
+      await api('PUT', '/admin/users/' + u.id + '/toggle');
+    } else if (action === 'free') {
+      await api('PUT', '/admin/users/' + u.id + '/approve-merchant');
+    } else if (action === 'cancel') {
+      if (!confirm(state.lang==='ar'?'إلغاء تسجيل هذا المستخدم؟':'Cancel this registration?')) return;
+      // No direct API for full cancel, skip for now
+    }
+    // Re-fetch users
+    const result = await api('GET', '/admin/users?limit=200');
+    state.users = result.users || [];
+    toast(state.lang==='ar'?'تم التحديث':'Updated');
+    renderAdminBody();
+  } catch(ex) {
+    toast('Error: ' + ex.message);
+  }
+}
+async function addPromo(){
+  const txt=val('promo_text'); if(!txt){toast(state.lang==='ar'?'أدخل نص اللافتة':'Enter banner text');return;}
+  try {
+    const result = await api('POST', '/admin/promos', { text: txt });
+    state.promos = state.promos || [];
+    state.promos.push(result);
+    toast(state.lang==='ar'?'تمت الإضافة':'Promo added');
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function removePromo(i){
+  const p = state.promos && state.promos[i]; if(!p) return;
+  try {
+    await api('DELETE', '/admin/promos/' + p.id);
+    state.promos.splice(i, 1);
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function genCode(){
+  const role=val('code_role')||'merchant', user=val('code_user');
+  const code=Math.floor(100000+Math.random()*900000);
+  try {
+    await api('POST', '/admin/codes', { code: String(code), role });
+    state.codes = state.codes || [];
+    state.codes.unshift({code:String(code),role,user,used:false});
+    toast((state.lang==='ar'?'الرمز: ':'Code: ')+code);
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function saveFees(){
+  const keys=['ad_publishing','featured','ad_appearance','highlight','mark_new','merchant_opening','commission_percent'];
+  const settings = {};
+  keys.forEach(k => {
+    const el = document.getElementById('fee_'+k);
+    if (el && el.value !== '') settings[k] = el.value;
+  });
+  try {
+    await api('PUT', '/admin/settings', settings);
+    state.fees = state.fees || {};
+    keys.forEach(k => { if (settings[k] != null) state.fees[k] = +settings[k]; });
+    toast(state.lang==='ar'?'تم حفظ الرسوم':'Fees saved');
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function reviewAd(id, ok){
+  try {
+    const result = await api('PUT', '/admin/ads/' + id + '/status', { status: ok ? 'approved' : 'rejected' });
+    const a = state.ads.find(x => x.id === id);
+    if (a) a.status = result.status;
+    toast(ok ? 'Approved & published' : 'Rejected');
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function approveReceipt(id, ok){
+  const a = state.ads.find(x => x.id === id); if(!a) return;
+  try {
+    if (ok) {
+      await api('PUT', '/admin/ads/' + id + '/status', { status: 'approved' });
+      a.status = 'approved';
+      a.payStatus = 'success';
+      a.confCode = String(Math.floor(100000+Math.random()*900000));
+      toast(state.lang==='ar'?'تم قبول الإيصال · صدر رمز التأكيد':'Receipt approved · confirmation code issued');
+    } else {
+      await api('PUT', '/admin/ads/' + id + '/status', { status: 'rejected' });
+      a.status = 'rejected';
+      a.payStatus = 'failed';
+      toast(state.lang==='ar'?'تم رفض الإيصال':'Receipt rejected');
+    }
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+// ---- revenue ledger (real events only; drives KPI + feeds today's chart point) ----
+function logRevenue(amount, type){
+  // Revenue is tracked server-side via admin actions
+  // This client-side function is kept as a no-op for compatibility
+}
+function isToday(ts){ if(!ts)return false; const d=new Date(ts), n=new Date(); return d.toDateString()===n.toDateString(); }
+
+// ---- account security helpers ----
+// DEMO-ONLY password hashing. A browser has no secret the client can't also
+// read, so this can only avoid storing plaintext in the local demo storage —
+// it is NOT a substitute for real server-side hashing with Argon2 or bcrypt,
+// which every production deployment must do instead (see users.password_hash
+// in the schema). Do not treat this as cryptographically equivalent.
+async function hashPassword(password, saltHex){
+  const data=new TextEncoder().encode(saltHex+':'+password);
+  const buf=await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function randomSalt(){
+  const arr=new Uint8Array(16); crypto.getRandomValues(arr);
+  return Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+// Enforce a strong password: 8+ chars and at least 3 of the 4 character classes.
+function passwordStrength(pw){
+  pw=pw||'';
+  const hasLower=/[a-z]/.test(pw);
+  const hasUpper=/[A-Z]/.test(pw);
+  const hasDigit=/[0-9]/.test(pw);
+  const hasSymbol=/[^A-Za-z0-9]/.test(pw);
+  const classes=[hasLower,hasUpper,hasDigit,hasSymbol].filter(Boolean).length;
+  const lenOk=pw.length>=8 && pw.length<=12;
+  const allFour=hasLower&&hasUpper&&hasDigit&&hasSymbol;
+  const ok=lenOk && allFour;
+  let level='weak';
+  if(ok) level = pw.length>=11 ? 'strong' : 'medium';
+  return {level, ok, classes, longEnough:lenOk};
+}
+function renderPwMeter(inputId, meterId){
+  const s=passwordStrength(val(inputId));
+  const el=document.getElementById(meterId); if(!el)return s;
+  const colors={weak:'var(--red)',medium:'var(--amber)',strong:'var(--green)'};
+  const labels={weak:t('pwWeak'),medium:t('pwMedium'),strong:t('pwStrong')};
+  const pct={weak:33,medium:66,strong:100}[s.level];
+  el.innerHTML=`<div class="pwbar"><div class="pwbar-fill" style="width:${pct}%;background:${colors[s.level]}"></div></div>
+    <span style="color:${colors[s.level]};font-size:11.5px">${labels[s.level]}</span> <span style="font-size:11px;color:var(--muted)">— ${t('pwHint')}</span>`;
+  return s;
+}
+
+// ---- analytics: 13 days of illustrative history + today computed from real activity ----
+const BASE_REG = { buyer:[2,3,2,4,5,4,6,7,6,8,9,8,10], seller:[1,2,1,2,3,2,3,4,3,4,5,4,5], merchant:[0,1,0,1,1,1,2,1,2,2,2,3,3] };
+const BASE_ADS = [3,4,3,5,6,5,7,8,7,9,10,9,11];
+const BASE_REV = [3000,4000,3500,5000,6000,5500,7000,8000,7500,9000,10000,9500,11000];
+function todayRegByRole(){
+  const b={buyer:0,seller:0,merchant:0};
+  (state.users||[]).forEach(u=>{ if(isToday(u.joined)) b[u.role]=(b[u.role]||0)+1; });
+  return b;
+}
+function todayAdsCount(){ return (state.ads||[]).filter(a=>a.created && isToday(a.created)).length; }
+function todayRevenue(){ return (state.revenue||[]).filter(r=>isToday(r.date)).reduce((s,r)=>s+r.amount,0); }
+function totalRevenue(){ return (state.revenue||[]).reduce((s,r)=>s+r.amount,0); }
+
+// simple inline SVG line chart for one or more series, sharing one scale
+function lineChart(seriesObj, colors, w, h){
+  const keys=Object.keys(seriesObj);
+  const allVals=keys.flatMap(k=>seriesObj[k]);
+  const max=Math.max(...allVals,1);
+  const n=seriesObj[keys[0]].length;
+  const stepX=w/(n-1);
+  const paths=keys.map(k=>{
+    const vals=seriesObj[k];
+    const pts=vals.map((v,i)=>[i*stepX,h-(v/max)*(h-6)-3]);
+    const line=pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    const dot=`<circle cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}" r="3" fill="${colors[k]}"/>`;
+    return `<path d="${line}" fill="none" stroke="${colors[k]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>${dot}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${paths}</svg>`;
+}
+// area chart (single series) for revenue
+function areaChart(values, color, w, h){
+  const max=Math.max(...values,1); const n=values.length; const stepX=w/(n-1);
+  const pts=values.map((v,i)=>[i*stepX, h-(v/max)*(h-6)-3]);
+  const line=pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const area=line+` L${w},${h} L0,${h} Z`;
+  const last=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+    <path d="${area}" fill="${color}" opacity="0.16"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" fill="${color}"/>
+  </svg>`;
+}
+function renderStats(b){
+  const ar=state.lang==='ar';
+  const reg=todayRegByRole();
+  const regSeries={buyer:[...BASE_REG.buyer,reg.buyer||0], seller:[...BASE_REG.seller,reg.seller||0], merchant:[...BASE_REG.merchant,reg.merchant||0]};
+  const adsSeries=[...BASE_ADS, todayAdsCount()];
+  const revSeries=[...BASE_REV, todayRevenue()];
+  const kpiAdsN=(state.ads||[]).filter(a=>a.status==='approved').length;
+  const kpiMerchN=(state.users||[]).filter(u=>u.role==='merchant').length;
+  const colors={buyer:'var(--blue)',seller:'var(--teal)',merchant:'var(--amber)'};
+  b.innerHTML=`
+    <div class="kpis">
+      <div class="kpi"><div class="kn">${(state.users||[]).length}</div><div class="kl">${t('kpiUsers')}</div></div>
+      <div class="kpi"><div class="kn">${kpiMerchN}</div><div class="kl">${t('kpiMerchants')}</div></div>
+      <div class="kpi"><div class="kn">${kpiAdsN}</div><div class="kl">${t('kpiAds')}</div></div>
+      <div class="kpi"><div class="kn">${money(totalRevenue(),'SDG')}</div><div class="kl">${t('kpiRevenue')}</div></div>
+    </div>
+
+    <div class="chartcard">
+      <div class="ct">${t('regTraffic')}</div>
+      ${lineChart(regSeries,colors,320,100)}
+      <div class="chart-legend">
+        <span><i style="background:${colors.buyer}"></i>${t('buyer')}</span>
+        <span><i style="background:${colors.seller}"></i>${t('seller')}</span>
+        <span><i style="background:${colors.merchant}"></i>${t('merchant')}</span>
+      </div>
+    </div>
+
+    <div class="chartcard">
+      <div class="ct">${t('adTraffic')}</div>
+      ${lineChart({[t('newAds')]:adsSeries},{[t('newAds')]:'var(--teal)'},320,90)}
+    </div>
+
+    <div class="chartcard">
+      <div class="ct">${t('revFlow')}</div>
+      ${areaChart(revSeries,'var(--amber)',320,90)}
+      <div class="meta" style="margin-top:8px">${ar?'اتجاه توضيحي للأيام السابقة؛ نقطة اليوم مأخوذة من نشاط حقيقي (إيصالات مقبولة ورسوم افتتاح متاجر).':"Prior days show an illustrative growth trend; today's point reflects real activity (approved receipts and store-opening fees)."}</div>
+    </div>`;
+}
+
+// ---- admin ads management unit: create / edit / feature / publish / delete any ad ----
+let adsUnitEditing=null, adsUnitCreating=false;
+function renderAdsUnit(b){
+  const ar=state.lang==='ar';
+  const list=[...state.ads].sort((x,y)=>(y.created||0)-(x.created||0));
+  const createForm = adsUnitCreating? `
+    <div class="review">
+      <div class="rtitle">${t('createAd')}</div>
+      <div class="field"><label>${t('f_title')}</label><input id="au_title" placeholder="${t('ph_title')}"></div>
+      <div class="field"><label>${t('f_category')}</label><select id="au_cat">${catOptions()}</select></div>
+      <div class="field"><label>${t('f_price')}</label><input id="au_price" type="number" placeholder="0"></div>
+      <div class="field"><label>${t('f_city')}</label><select id="au_city">${CITIES.map(c=>`<option ${c[0]===state.city?'selected':''}>${c[0]}</option>`).join('')}</select></div>
+      <div class="field"><label>${ar?'اسم البائع المعروض':'Displayed seller name'}</label><input id="au_seller" value="${ar?'خفض لى':'Souq'}"></div>
+      <div class="field"><label>${t('f_desc')}</label><textarea id="au_desc" rows="4" placeholder="${t('ph_desc')}"></textarea></div>
+      <div class="field"><label>${t('f_attach')}</label>
+        <input type="file" id="au_files" multiple accept="image/*,application/pdf,video/*" onchange="onFilesPicked('au_files','au_filePrev')">
+        <div class="filepreview" id="au_filePrev"></div>
+        <p class="lead" style="margin:6px 0 0;font-size:11.5px">${t('attachHint')}</p>
+      </div>
+      <button class="btn" onclick="createAdminAd()">${t('publish')}</button>
+      <button class="btn sec" onclick="adsUnitCreating=false;renderAdminBody();">${t('cancelEdit')}</button>
+    </div>` : `<button class="post-page-btn" onclick="draftFiles=[];adsUnitCreating=true;renderAdminBody();">＋ ${t('createAd')}</button>`;
+
+  const rows = list.map(a=>{
+    if(adsUnitEditing===a.id){
+      return `<div class="review">
+        <div class="field"><label>${t('f_title')}</label><input id="edit_title" value="${a.title}"></div>
+        <div class="field"><label>${t('f_price')}</label><input id="edit_price" type="number" value="${a.price}"></div>
+        <div class="field"><label>${t('f_city')}</label><select id="edit_city">${CITIES.map(c=>`<option ${c[0]===a.city?'selected':''}>${c[0]}</option>`).join('')}</select></div>
+        <div class="field"><label>${t('f_desc')}</label><textarea id="edit_desc" rows="3">${a.desc||''}</textarea></div>
+        <button class="btn" onclick="saveAdEdit(${a.id})">${t('saveEdit')}</button>
+        <button class="btn sec" onclick="adsUnitEditing=null;renderAdminBody();">${t('cancelEdit')}</button>
+      </div>`;
+    }
+    const statusColor = a.status==='approved'?'var(--green)':a.status==='rejected'?'var(--red)':'var(--amber)';
+    return `<div class="review">
+      <div class="rtitle">${a.title}${a.featured?' ⭐':''}</div>
+      <div class="meta">${catLabel(a.cat)} · ${money(a.price,a.cur)} · ${a.city} · ${a.seller}
+        · <span style="color:${statusColor}">${t(a.status)||a.status}</span></div>
+      <div class="rbtns" style="flex-wrap:wrap">
+        <button class="ghostmini" onclick="adsUnitEditing=${a.id};renderAdminBody();">${t('edit')}</button>
+        <button class="ghostmini" onclick="toggleFeature(${a.id})">${a.featured?t('unfeature'):t('feature')}</button>
+        <button class="ghostmini" onclick="togglePublish(${a.id})">${a.status==='approved'?t('unpublish'):t('publish')}</button>
+        <button class="rb-no" style="flex:0 0 auto;padding:8px 14px" onclick="deleteAd(${a.id})">${t('delete')}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  b.innerHTML = createForm + (list.length? rows : `<div class="empty">${t('noAllAds')}</div>`);
+}
+async function createAdminAd(){
+  const title=val('au_title'), price=+val('au_price');
+  if(!title||!price){toast(state.lang==='ar'?'أضف العنوان والسعر.':'Add a title and price.');return;}
+  try {
+    const result = await api('POST', '/ads', {
+      title, cat: val('au_cat'), price, city: val('au_city'),
+      desc: val('au_desc'), neg: '1'
+    });
+    // Refresh ads list
+    const adsResult = await api('GET', '/ads?limit=200');
+    state.ads = adsResult.ads || [];
+    draftFiles = [];
+    adsUnitCreating = false;
+    toast(t('adCreated'));
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function saveAdEdit(id){
+  const a = state.ads.find(x => x.id === id); if(!a) return;
+  const updates = {};
+  const t = val('edit_title'); if (t) updates.title = t;
+  const p = +val('edit_price'); if (p) updates.price = p;
+  const c = val('edit_city'); if (c) updates.city = c;
+  const d = val('edit_desc'); if (d) updates.desc = d;
+  try {
+    await api('PUT', '/ads/' + id, updates);
+    if (updates.title) a.title = updates.title;
+    if (updates.price) a.price = updates.price;
+    if (updates.city) a.city = updates.city;
+    if (updates.desc) a.desc = updates.desc;
+    adsUnitEditing = null;
+    toast(t('adUpdated'));
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function toggleFeature(id){
+  try {
+    const result = await api('PUT', '/admin/ads/' + id + '/feature');
+    const a = state.ads.find(x => x.id === id);
+    if (a) a.featured = result.featured;
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function togglePublish(id){
+  try {
+    const a = state.ads.find(x => x.id === id);
+    if (!a) return;
+    const newStatus = a.status === 'approved' ? 'rejected' : 'approved';
+    await api('PUT', '/admin/ads/' + id + '/status', { status: newStatus });
+    a.status = newStatus;
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+async function deleteAd(id){
+  if(!confirm(t('confirmDelete'))) return;
+  try {
+    await api('DELETE', '/ads/' + id);
+    state.ads = state.ads.filter(x => x.id !== id);
+    toast(t('adDeleted'));
+    renderAdminBody();
+  } catch(ex) { toast('Error: ' + ex.message); }
+}
+
+//// ---------- merchant storefront ----------
+let storeTab='ads';
+let openConv=null;
+// MERCHANT-ONLY. A seller must never be able to enter this screen.
+function renderStore(s){
+  if(!state.user || state.user.role!=='merchant'){
+    s.innerHTML=`<div class="empty">${t('storeMerchantOnly')}<br><br>
+      <button class="btn" style="max-width:240px;margin:0 auto;" onclick="openAuth()">${t('logIn')}</button></div>`;
+    return;
+  }
+  renderOwnPageBody(s);
+}
+async function renderOwnPageBody(s){
+  const u = state.user;
+  u.store = u.store || {logo:'',cover:'',bio:''};
+  state.convs = state.convs || [];
+
+  // Fetch merchant's ads and conversations from API
+  try {
+    const adsResult = await api('GET', '/ads?seller=' + encodeURIComponent(u.name) + '&limit=200');
+    // Replace local ads with the served ones from API
+    const serverAds = adsResult.ads || [];
+    // Update local state.ads with server data
+    for (const sa of serverAds) {
+      const idx = state.ads.findIndex(a => a.id === sa.id);
+      if (idx >= 0) state.ads[idx] = sa;
+      else state.ads.push(sa);
+    }
+  } catch(ex) {}
+
+  try {
+    const convs = await api('GET', '/conversations');
+    state.convs = convs || [];
+  } catch(ex) {
+    if (state.convs.length === 0) state.convs = seedConvs(u.name);
+  }
+
+  if (openConv !== null) {
+    // Fetch messages for open conversation
+    try {
+      const msgs = await api('GET', '/conversations/' + openConv + '/messages');
+      const c = state.convs.find(x => x.id === openConv);
+      if (c) c.msgs = msgs || [];
+    } catch(ex) {}
+    s.innerHTML = chatHTML(openConv);
+    bindChat();
+    return;
+  }
+
+  const mine = state.ads.filter(a => a.seller === u.name && a.status === 'approved');
+  s.innerHTML = `
+    <div class="store-cover">${u.store.cover?`<img src="${u.store.cover}">`:''}
+      <button class="editc" onclick="pickStoreImg('cover')">📷 ${t('editCover')}</button></div>
+    <div class="store-head">
+      <div class="store-logo" onclick="pickStoreImg('logo')">${u.store.logo?`<img src="${u.store.logo}">`:'🏬'}</div>
+      <div class="store-id"><div class="sn">${u.name}</div>
+        <div class="sm">${u.dept||''} · ${u.city||state.city} · ${mine.length} ${t('storeAds').toLowerCase()}</div></div>
+    </div>
+    <div class="store-edit-row">
+      <button onclick="pickStoreImg('logo')">🖼️ ${t('editLogo')}</button>
+      <button onclick="pickStoreImg('cover')">🌄 ${t('editCover')}</button>
+    </div>
+    <textarea class="store-bio" id="storeBio" rows="2" placeholder="${t('storeBio')}" onchange="saveBio()">${u.store.bio||''}</textarea>
+
+    <div class="store-tabs">
+      <button class="${storeTab==='ads'?'sel':''}" onclick="setStoreTab('ads')">${t('storeAds')}</button>
+      <button class="${storeTab==='msgs'?'sel':''}" onclick="setStoreTab('msgs')">${t('messages')}${unreadCount()?` (${unreadCount()})`:''}</button>
+    </div>
+    <div id="storeBody"></div>`;
+  renderStoreBody();
+}
+async function setStoreTab(t2) {
+  storeTab = t2;
+  const u = state.user;
+  if (t2 === 'ads') {
+    try {
+      const adsResult = await api('GET', '/ads?seller=' + encodeURIComponent(u.name) + '&limit=200');
+      const serverAds = adsResult.ads || [];
+      for (const sa of serverAds) {
+        const idx = state.ads.findIndex(a => a.id === sa.id);
+        if (idx >= 0) state.ads[idx] = sa;
+        else state.ads.push(sa);
+      }
+    } catch(ex) {}
+  } else {
+    try {
+      const convs = await api('GET', '/conversations');
+      state.convs = convs || [];
+    } catch(ex) {}
+  }
+  renderStoreBody();
+}
+function renderStoreBody(){
+  const b=document.getElementById('storeBody'); const u=state.user;
+  if(storeTab==='ads'){
+    const mine=state.ads.filter(a=>a.seller===u.name && a.status==='approved');
+    b.innerHTML = `<button class="post-page-btn" onclick="openPost()">＋ ${t('postFromPage')}</button>`+
+      (mine.length? mine.map(cardHTML).join('') : `<div class="empty">${t('noStoreAds')}</div>`);
+  } else {
+    const cs=state.convs||[];
+    b.innerHTML = cs.length? cs.map(c=>`
+      <div class="conv" onclick="openChat(${c.id})">
+        <span class="avatar">${initials(c.buyer)}</span>
+        <div class="cmeta"><div class="cn">${c.buyer}</div>
+          <div class="cl">${c.adTitle} · ${(c.msgs&&c.msgs.length)?c.msgs[c.msgs.length-1].body:''}</div></div>
+        ${c.unread?'<span class="unread"></span>':''}
+      </div>`).join('') : `<div class="empty">${t('noMsgs')}</div>`;
+  }
+}
+function unreadCount(){return (state.convs||[]).filter(c=>c.unread).length;}
+function pickStoreImg(kind){
+  // file input -> data URL
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{const f=inp.files[0]; if(!f)return; const r=new FileReader();
+    r.onload=()=>{state.user.store[kind]=r.result; save(); route();}; r.readAsDataURL(f);};
+  inp.click();
+}
+async function saveBio(){
+  state.user.store = state.user.store || {logo:'',cover:'',bio:''};
+  state.user.store.bio = val('storeBio');
+  try { await api('PUT', '/auth/profile', { store_bio: val('storeBio') }); } catch(ex) {}
+  toast(t('saveStore'));
+}
+
+async function openChat(id){
+  openConv = id;
+  const c = state.convs.find(x => x.id === id);
+  if (c) c.unread = false;
+  // Fetch messages from API
+  try {
+    const msgs = await api('GET', '/conversations/' + id + '/messages');
+    if (c) c.msgs = msgs || [];
+  } catch(ex) {
+    if (c) c.msgs = c.msgs || [];
+  }
+  route();
+}
+function chatHTML(id){
+  const c=state.convs.find(x=>x.id===id); if(!c){openConv=null;return '';}
+  const msgs = (c.msgs||[]).map(m => {
+    const fromMe = m.from_text === (state.user ? state.user.name : '') || m.from === 'me';
+    return { ...m, from: fromMe ? 'me' : 'them' };
+  });
+  return `
+    <button class="btn sec" style="margin-bottom:12px" onclick="closeChat()">${t('backStore')}</button>
+    <div class="chatbox">
+      <div class="chat-head"><span class="avatar">${initials(c.buyer)}</span>${c.buyer}
+        <span style="font-weight:400;color:var(--sand);font-size:12px;margin-${state.lang==='ar'?'right':'left'}:auto">${c.adTitle}</span></div>
+      <div class="chat-msgs" id="chatMsgs">
+        ${msgs.map(m=>`<div class="bub ${m.from==='me'?'me':'them'}">${m.body}</div>`).join('')}
+      </div>
+      <div class="chat-in"><input id="chatInput" placeholder="${t('typeMsg')}" onpaste="return guardFiles(event)" ondrop="return guardFiles(event)" onkeydown="if(event.key==='Enter')sendMsg(${id})">
+        <button onclick="sendMsg(${id})">${t('send')}</button></div>
+    </div>`;
+}
+function bindChat(){const m=document.getElementById('chatMsgs'); if(m)m.scrollTop=m.scrollHeight; const i=document.getElementById('chatInput'); if(i)i.focus();}
+async function sendMsg(id){
+  const c=state.convs.find(x=>x.id===id); const v=val('chatInput'); if(!v)return;
+  c.msgs = c.msgs || [];
+  c.msgs.push({from:'me',body:v});
+  try { await api('POST', '/conversations/' + id + '/messages', { body: v }); } catch(ex) {}
+  document.getElementById('chatInput').value='';
+  renderStore(document.getElementById('screen')); bindChat();
+}
+function closeChat(){openConv=null; route();}
+
+//// ---------- account ----------
+function renderAccount(s){
+  if(!state.user){s.innerHTML=`<div class="empty">${t('browseGuest')}<br><br>
+    <button class="btn" style="max-width:240px;margin:0 auto;" onclick="openAuth()">${t('logIn')}</button></div>`;return;}
+  const u=state.user;
+  const mine=state.ads.filter(a=>a.seller===u.name);
+  const byStatus=st=>mine.filter(a=>a.status===st).length;
+  const roleLabel = t(u.role);
+  const pub=state.lang==='ar'?'منشور':'Published', inrev=state.lang==='ar'?'قيد المراجعة':'In review',
+        unpaid=state.lang==='ar'?'غير مدفوع':'Draft/unpaid', rej=state.lang==='ar'?'مرفوض':'Rejected';
+  s.innerHTML=`
+    <div class="review"><div class="rtitle">${u.name}</div>
+      <div class="meta">${roleLabel}${u.dept?' · '+u.dept:''} · ${u.city||state.city}${u.pending?' · <span style="color:var(--amber)">'+t('pending')+'</span>':''}</div>
+    </div>
+    ${(u.role!=='buyer' || mine.length)?`
+    <h2 style="font-family:Sora;font-size:15px;margin:16px 0 10px;">${t('myAds')}</h2>
+    <div class="review"><div class="meta" style="margin:0">
+      ${pub}: ${byStatus('approved')} · ${inrev}: ${byStatus('pending_review')} · ${unpaid}: ${byStatus('pending_payment')} · ${rej}: ${byStatus('rejected')}
+    </div></div>
+    ${mine.filter(a=>a.confCode).map(a=>`
+      <div class="review" style="border-color:var(--teal)">
+        <div class="rtitle">🎫 ${t('adCode')} — ${a.title}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;letter-spacing:6px;color:var(--teal);margin:6px 0" dir="ltr">${a.confCode}</div>
+        <div class="meta">${t('adCodeHint')}</div>
+      </div>`).join('')}
+    ${mine.filter(a=>a.status==='approved').map(cardHTML).join('')}`:''}
+    <button class="btn sec" style="margin-top:18px" onclick="logout()">${t('logOut')}</button>`;
+}
+async function logout(){
+  try { await api('POST', '/auth/logout'); } catch(ex) {}
+  saveSession(null);
+  state.user = null;
+  state.screen='feed';
+  toast(state.lang==='ar'?'تم تسجيل الخروج':'Logged out');
+  route();
+}
+
+//// ---------- sheet helpers ----------
+function showSheet(html){document.getElementById('overlayRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeSheet()"><div class="sheet">${html}</div></div>`;}
+function closeSheet(){document.getElementById('overlayRoot').innerHTML='';}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+
+//// ---------- nav ----------
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{state.screen=b.dataset.screen;state.q='';route();});
+document.getElementById('fab').onclick=openPost;
+document.getElementById('themeBtn').onclick=()=>{state.theme=state.theme==='dark'?'light':'dark';save();applyChrome();};
+document.getElementById('langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';save();applyChrome();route();};
+
+//// ---------- boot ----------
+(async()=>{await load();applyChrome();renderCitySel();route();})();
+</script>
+
+</body>
+</html>

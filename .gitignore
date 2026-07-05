@@ -1,0 +1,4 @@
+node_modules/
+souq.db
+uploads/*
+!uploads/.gitkeep
