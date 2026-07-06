@@ -1,6 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const { sendOtp } = require('../services/whatsapp');
 
 const router = express.Router();
 let dbs = null;
@@ -68,9 +70,86 @@ function validWa(wa) {
 }
 const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e));
 
+// ---- OTP: User -> Express API -> Generate OTP -> Save OTP -> WhatsApp API ----
+const OTP_TTL_MS = 5 * 60 * 1000;        // code valid 5 minutes
+const OTP_MAX_ATTEMPTS = 5;              // wrong tries before the code dies
+const OTP_RESEND_WINDOW_MS = 15 * 60 * 1000;
+const OTP_MAX_PER_WINDOW = 3;            // max sends per contact per window
+
+const hashOtp = (code, contact) =>
+  crypto.createHash('sha256').update(`${code}:${contact}:${process.env.OTP_PEPPER || 'souq'}`).digest('hex');
+
+router.post('/otp/request', async (req, res) => {
+  try {
+    const { wa, email, lang } = req.body;
+    let contact, type;
+    if (wa) {
+      if (!validWa(wa)) return res.status(400).json({ error: 'Error in the WhatsApp number' });
+      contact = String(wa).replace(/[\s\-()]/g, ''); type = 'wa';
+    } else if (email) {
+      if (!validEmail(email)) return res.status(400).json({ error: 'Invalid email address' });
+      contact = String(email).toLowerCase(); type = 'email';
+    } else return res.status(400).json({ error: 'WhatsApp number or email required' });
+
+    const { getSync, runSync, saveDb } = await getDb();
+
+    // throttle: max OTP_MAX_PER_WINDOW sends per contact per window
+    const recent = getSync('SELECT COUNT(*) AS c FROM otps WHERE contact = ? AND created > ?',
+      [contact, Date.now() - OTP_RESEND_WINDOW_MS]);
+    if (recent.c >= OTP_MAX_PER_WINDOW)
+      return res.status(429).json({ error: 'Too many codes requested. Try again later.' });
+
+    // Generate OTP
+    const code = String(crypto.randomInt(100000, 1000000));
+    // Save OTP (hashed — the plain code is never stored)
+    runSync('UPDATE otps SET used = 1 WHERE contact = ? AND used = 0', [contact]); // invalidate older codes
+    runSync(`INSERT INTO otps (contact, contact_type, code_hash, purpose, expires, created)
+      VALUES (?, ?, ?, 'register', ?, ?)`, [contact, type, hashOtp(code, contact), Date.now() + OTP_TTL_MS, Date.now()]);
+    saveDb();
+
+    // WhatsApp API -> message to WhatsApp (email channel: dev mode for now)
+    let dev = true;
+    if (type === 'wa') {
+      const r = await sendOtp(contact, code, lang || 'en');
+      dev = r.dev;
+    } else {
+      console.log(`[email:dev] to=${contact} :: code ${code}`);
+    }
+
+    const out = { sent: true, channel: type, expires_in: OTP_TTL_MS / 1000 };
+    // In dev mode (no gateway configured) expose the code so testing can continue.
+    if (dev && (process.env.DEV_SHOW_OTP || 'true') === 'true') out.dev_code = code;
+    res.json(out);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/otp/verify', async (req, res) => {
+  try {
+    const { wa, email, code } = req.body;
+    const contact = wa ? String(wa).replace(/[\s\-()]/g, '') : (email ? String(email).toLowerCase() : null);
+    if (!contact || !code) return res.status(400).json({ error: 'Contact and code required' });
+
+    const { getSync, runSync, saveDb } = await getDb();
+    const row = getSync('SELECT * FROM otps WHERE contact = ? AND used = 0 ORDER BY id DESC LIMIT 1', [contact]);
+    if (!row) return res.status(400).json({ error: 'No code requested for this contact' });
+    if (row.expires < Date.now()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
+    if (row.attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ error: 'Too many wrong attempts. Request a new code.' });
+
+    if (hashOtp(String(code), contact) !== row.code_hash) {
+      runSync('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [row.id]); saveDb();
+      return res.status(400).json({ error: 'Incorrect code' });
+    }
+
+    // success: single-use verification token that register must present
+    const token = uuidv4();
+    runSync('UPDATE otps SET verify_token = ? WHERE id = ?', [token, row.id]); saveDb();
+    res.json({ verified: true, otp_token: token });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/register', async (req, res) => {
   try {
-    const { name, password, email, wa, city, dept, role } = req.body;
+    const { name, password, email, wa, city, dept, role, otp_token } = req.body;
     if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
     if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
@@ -84,6 +163,14 @@ router.post('/register', async (req, res) => {
     const safeRole = roleMap[role] || 'buyer';
 
     const { getSync, runSync, lastId, saveDb } = await getDb();
+
+    // The contact must have been verified via OTP just before registering.
+    const contactKey = wa ? String(wa).replace(/[\s\-()]/g, '') : String(email).toLowerCase();
+    const otp = otp_token
+      ? getSync('SELECT * FROM otps WHERE verify_token = ? AND contact = ? AND used = 0', [otp_token, contactKey])
+      : null;
+    if (!otp) return res.status(403).json({ error: 'Contact not verified. Complete the code step first.' });
+    runSync('UPDATE otps SET used = 1 WHERE id = ?', [otp.id]);   // single use
     const existing = getSync('SELECT id FROM users WHERE name = ?', [name]);
     if (existing) return res.status(409).json({ error: 'Username already taken' });
     const waNorm = wa ? String(wa).replace(/[\s\-()]/g, '') : '';

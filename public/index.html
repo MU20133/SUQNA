@@ -1072,18 +1072,20 @@ function doRegister(){
   }
   let dept=val('f_dept'); const dother=val('f_dept_other'); if(dept==='Other'&&dother)dept=dother;
   pendingRegistration={name,contact,pw,role:pendingRole,city:val('f_city')||state.city,dept};
-  const code=String(Math.floor(100000+Math.random()*900000));
-  pendingRegistration._code=code;
-  closeSheet();
-  showSheet(verifySheet(contact,code));
+  // Real OTP: the SERVER generates, saves and sends the code (WhatsApp API).
+  api('POST','/auth/otp/request',
+      contact.type==='wa' ? {wa:contact.value, lang:state.lang} : {email:contact.value, lang:state.lang})
+    .then(r=>{ closeSheet(); showSheet(verifySheet(contact, r.dev_code)); })
+    .catch(ex=>toast(ex.message));
 }
-// Registered with WhatsApp -> code goes out via WhatsApp; with email -> via
-// email. (Demo build: the code is displayed since no gateway is connected.)
-function verifySheet(contact,code){
+// The code arrives on the SAME channel the user registered with. dev_code is
+// only present while no WhatsApp gateway is configured (testing mode).
+function verifySheet(contact,devCode){
   const byWa = contact.type==='wa';
+  const devNote = devCode ? ` (${t('demoCode')}: <b class="mono">${devCode}</b>)` : '';
   return `<button class="sheet-x" onclick="closeSheet()">×</button>
   <h2>${byWa?t('verifyWa'):t('verifyEmail')}</h2>
-  <p class="lead">${byWa?t('verifyWaLead'):t('verifyEmailLead')} <b dir="ltr">${contact.value}</b>. (${t('demoCode')}: <b class="mono">${code}</b>)</p>
+  <p class="lead">${byWa?t('verifyWaLead'):t('verifyEmailLead')} <b dir="ltr">${contact.value}</b>.${devNote}</p>
   <div class="field"><label>${t('enterCode')}</label><input id="ev_code" class="mono" placeholder="------" onkeydown="if(event.key==='Enter')verifyContactCode()"></div>
   <button class="btn" onclick="verifyContactCode()">${t('verify')}</button>`;
 }
@@ -1092,7 +1094,6 @@ function verifySheet(contact,code){
 // the existing admin-issued confirmation-code gate; everyone else logs in.
 async function verifyContactCode(){
   if(!pendingRegistration) return closeSheet();
-  if(val('ev_code')!==pendingRegistration._code){ toast(t('wrongCode')); return; }
   const ct=pendingRegistration.contact;
   const name = pendingRegistration.name;
   const password = pendingRegistration.pw;
@@ -1103,7 +1104,11 @@ async function verifyContactCode(){
   const email = ct.type==='email' ? ct.value : '';
 
   try {
-    const result = await api('POST', '/auth/register', { name, password, email, wa, city, dept, role });
+    // The SERVER checks the code (expiry + attempt limits) and returns a
+    // single-use token that register must present.
+    const v = await api('POST', '/auth/otp/verify',
+      ct.type==='wa' ? {wa, code: val('ev_code')} : {email, code: val('ev_code')});
+    const result = await api('POST', '/auth/register', { name, password, email, wa, city, dept, role, otp_token: v.otp_token });
     saveSession(result.sessionId);
     state.user = result.user;
     state.city = result.user.city || state.city;

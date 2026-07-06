@@ -3,3 +3,4 @@ souq.db
 uploads/*
 !uploads/.gitkeep
 .env
+cloudflared.exe

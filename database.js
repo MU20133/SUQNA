@@ -213,6 +213,20 @@ function migrate() {
     )
   `);
   db.run(`
+    CREATE TABLE IF NOT EXISTS otps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact TEXT NOT NULL,
+      contact_type TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      purpose TEXT DEFAULT 'register',
+      expires INTEGER NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      used INTEGER DEFAULT 0,
+      verify_token TEXT,
+      created INTEGER NOT NULL
+    )
+  `);
+  db.run(`
     CREATE TABLE IF NOT EXISTS user_engagements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
