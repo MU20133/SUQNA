@@ -25,6 +25,27 @@ This router's DNS blocks `*.trycloudflare.com` (NXDOMAIN). The URL still works
 for everyone else. To open it yourself: use mobile data, or set the device DNS
 to `1.1.1.1`.
 
+## WhatsApp OTP (real sending)
+
+The OTP pipeline (generate -> save hashed -> send) is live. By default it runs
+in dev mode: the code is logged and shown on screen so testing needs no account.
+
+To send REAL WhatsApp messages (free to start):
+1. https://developers.facebook.com -> create app -> add "WhatsApp" product.
+2. Meta gives you a FREE test sender number; verify up to 5 recipient numbers.
+3. Copy the temporary access token + phone number ID into `.env`:
+   ```
+   WHATSAPP_PROVIDER=meta
+   WHATSAPP_TOKEN=EAAG...
+   WHATSAPP_PHONE_ID=1234567890
+   DEV_SHOW_OTP=false
+   ```
+4. `pm2 restart souq-api --update-env` — codes now arrive in WhatsApp and the
+   on-screen demo code disappears.
+
+For launch: complete Meta business verification to message any number
+(~First 1,000 conversations/month free), or use Twilio WhatsApp instead.
+
 ## Admin access
 - Username `admin`, password from `.env` → `ADMIN_PASSWORD` (default `admin123`).
 - Change it in `.env` before sharing the URL widely; delete `.env` default in production.
