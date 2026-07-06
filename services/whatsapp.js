@@ -11,11 +11,7 @@
 //
 // sendOtp(waNumber, code, lang) -> { sent: boolean, dev: boolean }
 
-async function sendViaMeta(to, body) {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_ID;
-  if (!token || !phoneId) throw new Error('WHATSAPP_TOKEN / WHATSAPP_PHONE_ID not set');
-
+async function metaSendWith(phoneId, token, to, body) {
   const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
     method: 'POST',
     headers: {
@@ -32,6 +28,27 @@ async function sendViaMeta(to, body) {
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || `Meta API error ${res.status}`);
   return json;
+}
+
+// The API Setup page shows two long IDs (phone-number ID and WABA ID) that are
+// easy to mix up — try the primary, and on an id-related error fall back to
+// WHATSAPP_PHONE_ID_ALT, remembering whichever worked.
+let workingPhoneId = null;
+async function sendViaMeta(to, body) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const ids = [workingPhoneId, process.env.WHATSAPP_PHONE_ID, process.env.WHATSAPP_PHONE_ID_ALT]
+    .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+  if (!token || !ids.length) throw new Error('WHATSAPP_TOKEN / WHATSAPP_PHONE_ID not set');
+
+  let lastErr;
+  for (const id of ids) {
+    try {
+      const out = await metaSendWith(id, token, to, body);
+      if (workingPhoneId !== id) { workingPhoneId = id; console.log(`[whatsapp:meta] using phone id ${id}`); }
+      return out;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
 async function sendOtp(to, code, lang) {
