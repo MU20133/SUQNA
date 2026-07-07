@@ -234,6 +234,40 @@ router.delete('/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Payment receipt for the publishing fee. The admin checks it (spec item 3);
+// a copy goes to the Supabase "receipts" cloud bucket when configured.
+router.post('/:id/receipt', upload.single('receipt'), async (req, res) => {
+  try {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId) return res.status(401).json({ error: 'Not authenticated' });
+
+    const dbs = await getDb();
+    const session = dbs.getSync('SELECT * FROM sessions WHERE id = ? AND expires > ?', [sessionId, Date.now()]);
+    if (!session) return res.status(401).json({ error: 'Session expired' });
+    const user = dbs.getSync('SELECT id, name, role FROM users WHERE id = ?', [session.user_id]);
+
+    const ad = dbs.getSync('SELECT * FROM ads WHERE id = ?', [req.params.id]);
+    if (!ad) return res.status(404).json({ error: 'Ad not found' });
+    if (ad.owner !== user.name && user.role !== 'admin') return res.status(403).json({ error: 'Not your ad' });
+
+    const fname = req.file ? req.file.filename : '';
+    dbs.runSync('UPDATE ads SET receipt_file = ?, receipt_note = ?, pay_method = ?, pay_status = ? WHERE id = ?',
+      [fname, req.body.note || '', 'cash', 'pending', ad.id]);
+    dbs.saveDb();
+
+    if (req.file) {
+      const supa = require('../services/supabase');
+      if (supa.configured()) {
+        try {
+          const fs = require('fs');
+          await supa.uploadObject('receipts', `ad${ad.id}_${fname}`, fs.readFileSync(req.file.path));
+        } catch (e) { console.error('[supabase] receipt mirror failed:', e.message); }
+      }
+    }
+    res.status(201).json({ ok: true, pay_status: 'pending' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/:id/like', async (req, res) => {
   try {
     const sessionId = req.headers['x-session-id'];

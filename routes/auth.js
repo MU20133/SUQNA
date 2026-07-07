@@ -109,13 +109,23 @@ router.post('/otp/request', async (req, res) => {
       VALUES (?, ?, ?, 'register', ?, ?)`, [contact, type, hashOtp(code, contact), Date.now() + OTP_TTL_MS, Date.now()]);
     saveDb();
 
-    // WhatsApp API -> message to WhatsApp (email channel: dev mode for now)
+    // WhatsApp API -> message to WhatsApp; email -> Supabase Auth mailer.
     let dev = true;
     if (type === 'wa') {
       const r = await sendOtp(contact, code, lang || 'en');
       dev = r.dev;
     } else {
-      console.log(`[email:dev] to=${contact} :: code ${code}`);
+      const supa = require('../services/supabase');
+      if (supa.configured()) {
+        // Supabase generates AND emails its own code; our local row just
+        // gates the flow — verification is delegated in /otp/verify.
+        await supa.sendEmailOtp(contact);
+        runSync('UPDATE otps SET code_hash = ? WHERE contact = ? AND used = 0', ['supabase', contact]);
+        saveDb();
+        dev = false;
+      } else {
+        console.log(`[email:dev] to=${contact} :: code ${code}`);
+      }
     }
 
     const out = { sent: true, channel: type, expires_in: OTP_TTL_MS / 1000 };
@@ -137,7 +147,14 @@ router.post('/otp/verify', async (req, res) => {
     if (row.expires < Date.now()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
     if (row.attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ error: 'Too many wrong attempts. Request a new code.' });
 
-    if (hashOtp(String(code), contact) !== row.code_hash) {
+    if (row.code_hash === 'supabase') {
+      const supa = require('../services/supabase');
+      const ok = await supa.verifyEmailOtp(contact, String(code));
+      if (!ok) {
+        runSync('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [row.id]); saveDb();
+        return res.status(400).json({ error: 'Incorrect code' });
+      }
+    } else if (hashOtp(String(code), contact) !== row.code_hash) {
       runSync('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [row.id]); saveDb();
       return res.status(400).json({ error: 'Incorrect code' });
     }
@@ -151,9 +168,12 @@ router.post('/otp/verify', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, password, email, wa, city, dept, role, otp_token } = req.body;
+    const { name, password, email, wa, city, dept, role, otp_token, age_confirmed } = req.body;
     if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
     if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    // Age approval is a registration requirement for every role.
+    if (age_confirmed !== true && age_confirmed !== 'true' && age_confirmed !== 1)
+      return res.status(400).json({ error: 'You must confirm you are 18 or older' });
 
     // Contact: WhatsApp number or email is required, and must be valid.
     if (!wa && !email) return res.status(400).json({ error: 'WhatsApp number or email required' });
@@ -185,10 +205,10 @@ router.post('/register', async (req, res) => {
     const password_hash = bcrypt.hashSync(password, salt);
     const joined = Date.now();
 
-    runSync(`INSERT INTO users (name, email, wa, city, dept, role, password_hash, salt, joined, contact_verified)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+    runSync(`INSERT INTO users (name, email, wa, city, dept, role, password_hash, salt, joined, contact_verified, age_confirmed, age_confirmed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`, [
         name, email ? String(email).toLowerCase() : '', waNorm, city || '', dept || '',
-        safeRole, password_hash, salt, joined, waNorm ? 'wa' : 'email'
+        safeRole, password_hash, salt, joined, waNorm ? 'wa' : 'email', Date.now()
     ]);
     saveDb();
 
@@ -319,6 +339,43 @@ router.post('/store-image', storeImg.single('image'), async (req, res) => {
     saveDb();
 
     res.json({ url });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Merchant identity document (proof of identity). Stored locally and, when
+// Supabase is configured, mirrored to the private "identity" cloud bucket.
+const idProofUp = multer({
+  storage: multer.diskStorage({
+    destination: path.join(__dirname, '..', 'uploads'),
+    filename: (req, file, cb) => cb(null, 'id_' + uuidv4() + path.extname(file.originalname))
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/\.(jpg|jpeg|png|webp|pdf)$/i.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Only images or PDF allowed'));
+  }
+});
+
+router.post('/id-proof', idProofUp.single('file'), async (req, res) => {
+  try {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId) return res.status(401).json({ error: 'Not authenticated' });
+    const { getSync, runSync, saveDb } = await getDb();
+    const session = getSync('SELECT * FROM sessions WHERE id = ? AND expires > ?', [sessionId, Date.now()]);
+    if (!session) return res.status(401).json({ error: 'Session expired' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    runSync('UPDATE users SET id_proof_file = ? WHERE id = ?', [req.file.filename, session.user_id]);
+    saveDb();
+
+    const supa = require('../services/supabase');
+    if (supa.configured()) {
+      try {
+        const fs = require('fs');
+        await supa.uploadObject('identity', req.file.filename, fs.readFileSync(req.file.path));
+      } catch (e) { console.error('[supabase] identity mirror failed:', e.message); }
+    }
+    res.status(201).json({ ok: true, file: req.file.filename });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

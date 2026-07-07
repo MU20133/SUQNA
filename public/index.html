@@ -287,6 +287,7 @@ const I18N = {
     f_sellerName:"Seller name", f_dept:"Sales department", f_city:"City",
     f_storeName:"Store name", ph_store:"Store name", f_email:"Email",
     f_idProof:"Proof of identity", f_acceptTerms:"I accept and abide by the merchant terms and conditions.",
+    f_age18:"I confirm that I am 18 years of age or older.", age18Error:"You must confirm you are 18 or older.",
     createEnter:"Create account & enter", submitMerchant:"Submit · admin will send a confirmation code",
     accountType:"Account type", buyer:"Buyer", seller:"Seller", merchant:"Merchant",
     chooseUse:"Choose how you want to use the app.", roleLead:"You need an account to post. Register or log in first.",
@@ -362,6 +363,7 @@ const I18N = {
     f_sellerName:"اسم البائع", f_dept:"قسم المبيعات", f_city:"المدينة",
     f_storeName:"اسم المتجر", ph_store:"اسم المتجر", f_email:"البريد الإلكتروني",
     f_idProof:"إثبات الهوية", f_acceptTerms:"أوافق على الشروط والأحكام الخاصة بالتجار وألتزم بها.",
+    f_age18:"أقر بأن عمري 18 عاماً أو أكثر.", age18Error:"يجب تأكيد أن عمرك 18 عاماً أو أكثر.",
     createEnter:"إنشاء الحساب والدخول", submitMerchant:"إرسال · سيرسل المشرف رمز تأكيد",
     accountType:"نوع الحساب", buyer:"مشتري", seller:"بائع", merchant:"تاجر",
     chooseUse:"اختر طريقة استخدامك للتطبيق.", roleLead:"تحتاج إلى حساب للنشر. سجّل أو ادخل أولاً.",
@@ -980,7 +982,13 @@ async function payAd(){
     ad.payStatus='pending';
     ad.receiptNote = val('pay_notes');
     ad.status='pending_review';
-    try { await api('PUT', '/ads/'+ad.id, { pay_method: 'cash' }); } catch(ex) {}
+    try {
+      const fd = new FormData();
+      const rf = document.getElementById('pay_receipt')?.files?.[0];
+      if (rf) fd.append('receipt', rf);
+      fd.append('note', val('pay_notes'));
+      await api('POST', '/ads/'+ad.id+'/receipt', fd);   // receipt goes for admin review (+cloud copy)
+    } catch(ex) { console.warn('receipt upload failed', ex); }
     closeSheet();
     toast('Receipt submitted · awaiting admin confirmation');
   } else {
@@ -1035,7 +1043,8 @@ function roleFields(r){
     <p class="lead" style="margin:4px 0 0;font-size:11.5px;color:var(--muted)" dir="auto">${t('waFormatHint')}</p></div>`;
   const pw = `<div class="field"><label>${t('password')}</label><input id="f_pw" type="password" placeholder="••••••" oninput="renderPwMeter('f_pw','pwmeter')">
       <div id="pwmeter"></div></div>
-    <div class="field"><label>${t('confirmPassword')}</label><input id="f_pw2" type="password" placeholder="••••••"></div>`;
+    <div class="field"><label>${t('confirmPassword')}</label><input id="f_pw2" type="password" placeholder="••••••"></div>
+    <label class="chkrow"><input type="checkbox" id="f_age"><span>${t('f_age18')}</span></label>`;
   // Buyer & seller: exactly 4 fields — username, WhatsApp/email, password, confirm.
   if(r==='buyer') return `<div class="field"><label>${t('f_username')}</label><input id="f_name" placeholder="${t('ph_name')}"></div>${contact}${pw}
     <button class="btn" onclick="doRegister()">${t('createEnter')}</button>`;
@@ -1092,11 +1101,14 @@ function doRegister(){
   const pw=val('f_pw'), pw2=val('f_pw2');
   if(!passwordStrength(pw).ok){ toast(t('pwTooWeak')); return; }
   if(pw!==pw2){ toast(t('pwMismatch')); return; }
+  if(!document.getElementById('f_age')?.checked){ toast(t('age18Error')); return; }
   if(pendingRole==='merchant' && !document.getElementById('f_terms').checked){
     toast(state.lang==='ar'?'يرجى الموافقة على شروط التجار.':'Please accept the merchant terms.'); return;
   }
+  // keep the identity file (File objects outlive the sheet DOM)
+  const idFile = document.getElementById('f_id')?.files?.[0] || null;
   let dept=val('f_dept'); const dother=val('f_dept_other'); if(dept==='Other'&&dother)dept=dother;
-  pendingRegistration={name,contact,pw,role:pendingRole,city:val('f_city')||state.city,dept};
+  pendingRegistration={name,contact,pw,role:pendingRole,city:val('f_city')||state.city,dept,idFile,age:true};
   // Real OTP: the SERVER generates, saves and sends the code (WhatsApp API).
   api('POST','/auth/otp/request',
       contact.type==='wa' ? {wa:contact.value, lang:state.lang} : {email:contact.value, lang:state.lang})
@@ -1133,12 +1145,19 @@ async function verifyContactCode(){
     // single-use token that register must present.
     const v = await api('POST', '/auth/otp/verify',
       ct.type==='wa' ? {wa, code: val('ev_code')} : {email, code: val('ev_code')});
-    const result = await api('POST', '/auth/register', { name, password, email, wa, city, dept, role, otp_token: v.otp_token });
+    const result = await api('POST', '/auth/register', { name, password, email, wa, city, dept, role, otp_token: v.otp_token, age_confirmed: true });
     saveSession(result.sessionId);
     state.user = result.user;
     state.city = result.user.city || state.city;
     pendingRegistration = null; closeSheet();
 
+    // Merchant identity document -> server (+ Supabase identity bucket)
+    if (pendingRegistration && pendingRegistration.idFile) {
+      try {
+        const fd = new FormData(); fd.append('file', pendingRegistration.idFile);
+        await api('POST', '/auth/id-proof', fd);
+      } catch(ex) { console.warn('id-proof upload failed', ex); }
+    }
     if (result.user.role === 'merchant_app' || result.user.role === 'merchant') {
       // Generate a demo merchant code
       try {

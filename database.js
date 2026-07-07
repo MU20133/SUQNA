@@ -66,8 +66,21 @@ async function getDb() {
   db.pragma('foreign_keys = ON');
 
   migrate();
+  upgradeColumns();
   seed();
   return { db, prepareSync, runSync, allSync, getSync, lastId, saveDb, exec: (sql) => db.exec(sql) };
+}
+
+// Add columns introduced after first release to already-created tables.
+function upgradeColumns() {
+  const add = (table, col, ddl) => {
+    const has = db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === col);
+    if (!has) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  };
+  add('users', 'age_confirmed', 'age_confirmed INTEGER DEFAULT 0');
+  add('users', 'age_confirmed_at', 'age_confirmed_at INTEGER');
+  add('users', 'id_proof_file', "id_proof_file TEXT DEFAULT ''");
+  add('ads', 'receipt_file', "receipt_file TEXT DEFAULT ''");
 }
 
 function migrate() {
@@ -88,6 +101,9 @@ function migrate() {
       failed_attempts INTEGER DEFAULT 0,
       lock_until INTEGER,
       contact_verified TEXT DEFAULT '',
+      age_confirmed INTEGER DEFAULT 0,
+      age_confirmed_at INTEGER,
+      id_proof_file TEXT DEFAULT '',
       store_logo TEXT DEFAULT '',
       store_cover TEXT DEFAULT '',
       store_bio TEXT DEFAULT ''
@@ -113,7 +129,8 @@ function migrate() {
       views INTEGER DEFAULT 0,
       likes INTEGER DEFAULT 0,
       conf_code TEXT,
-      receipt_note TEXT DEFAULT ''
+      receipt_note TEXT DEFAULT '',
+      receipt_file TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS ad_photos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

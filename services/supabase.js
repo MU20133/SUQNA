@@ -45,6 +45,43 @@ async function uploadBackup(localPath, objectName, bucket = 'backups') {
   return json;
 }
 
+// Generic object upload (receipts, identity documents, ...).
+async function uploadObject(bucket, objectName, buffer, contentType = 'application/octet-stream') {
+  await ensureBucket(bucket);
+  const res = await fetch(`${URL_()}/storage/v1/object/${bucket}/${objectName}`, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': contentType, 'x-upsert': 'true' }),
+    body: buffer
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`upload failed: ${json.message || json.error || res.status}`);
+  return json;
+}
+
+// --- Email OTP via Supabase Auth (built-in mailer, no SMTP account needed) ---
+// Sends a 6-digit code to the address; verify with the same endpoint pair.
+async function sendEmailOtp(email) {
+  const res = await fetch(`${URL_()}/auth/v1/otp`, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ email, create_user: true })
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(`email otp failed: ${json.msg || json.error_description || res.status}`);
+  }
+  return true;
+}
+
+async function verifyEmailOtp(email, token) {
+  const res = await fetch(`${URL_()}/auth/v1/verify`, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ type: 'email', email, token })
+  });
+  return res.ok;
+}
+
 async function listBackups(bucket = 'backups') {
   const res = await fetch(`${URL_()}/storage/v1/object/list/${bucket}`, {
     method: 'POST',
@@ -56,4 +93,4 @@ async function listBackups(bucket = 'backups') {
   return json;
 }
 
-module.exports = { configured, ensureBucket, uploadBackup, listBackups };
+module.exports = { configured, ensureBucket, uploadBackup, listBackups, uploadObject, sendEmailOtp, verifyEmailOtp };
