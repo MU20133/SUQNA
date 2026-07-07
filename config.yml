@@ -1,1 +1,13 @@
-{}
+# Cloudflare NAMED tunnel config (permanent address).
+# Filled in automatically once the domain exists:
+#   1. cloudflared tunnel login              (user authorizes in browser)
+#   2. cloudflared tunnel create souq        (writes credentials json)
+#   3. cloudflared tunnel route dns souq app.<DOMAIN>
+#   4. fill tunnel + credentials-file below, swap PM2 to: cloudflared tunnel run souq
+tunnel: TUNNEL_ID_HERE
+credentials-file: C:\Users\User\.cloudflared\TUNNEL_ID_HERE.json
+protocol: http2
+ingress:
+  - hostname: app.DOMAIN_HERE
+    service: http://localhost:3000
+  - service: http_status:404
