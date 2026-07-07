@@ -46,6 +46,25 @@ To send REAL WhatsApp messages (free to start):
 For launch: complete Meta business verification to message any number
 (~First 1,000 conversations/month free), or use Twilio WhatsApp instead.
 
+
+## Cloud-persistent database (Supabase)
+
+The app keeps its fast local SQLite engine, but the database file's lifecycle is
+cloud-backed so it survives on ANY host (including free/ephemeral ones):
+
+- **On startup:** if there is no local `souq.db`, the newest cloud snapshot is
+  downloaded from the Supabase `backups` bucket (`souq-latest.db`) and restored.
+- **While running:** a full snapshot is mirrored to the cloud every 5 minutes.
+- **On shutdown (SIGTERM/SIGINT):** a final snapshot is flushed to the cloud, so
+  a redeploy/restart loses nothing.
+- **Nightly:** a timestamped historical backup (keeps 14) for point-in-time recovery.
+
+Effect: you can deploy the app on a free host that wipes its disk on restart and
+your data still persists — it lives in Supabase. On a normal server/PC the local
+file is always the source of truth (restore only runs when no local DB exists).
+
+Requires `SUPABASE_URL` + `SUPABASE_KEY` in `.env` (already configured).
+
 ## Admin access
 - Username `admin`, password from `.env` → `ADMIN_PASSWORD` (default `admin123`).
 - Change it in `.env` before sharing the URL widely; delete `.env` default in production.

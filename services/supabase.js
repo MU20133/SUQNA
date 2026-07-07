@@ -119,6 +119,17 @@ async function verifySmsOtp(phone, token) {
   return res.ok;
 }
 
+// Download an object's bytes; returns a Buffer, or null if it doesn't exist.
+async function downloadObject(bucket, objectName) {
+  const res = await fetch(`${URL_()}/storage/v1/object/${bucket}/${objectName}`, {
+    headers: headers()
+  });
+  if (res.status === 404 || res.status === 400) return null;
+  if (!res.ok) throw new Error(`download failed: ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  return buf.length ? buf : null;
+}
+
 async function listBackups(bucket = 'backups') {
   const res = await fetch(`${URL_()}/storage/v1/object/list/${bucket}`, {
     method: 'POST',
@@ -130,4 +141,4 @@ async function listBackups(bucket = 'backups') {
   return json;
 }
 
-module.exports = { configured, ensureBucket, uploadBackup, listBackups, uploadObject, sendEmailOtp, verifyEmailOtp, sendSmsOtp, verifySmsOtp };
+module.exports = { configured, ensureBucket, uploadBackup, listBackups, uploadObject, downloadObject, sendEmailOtp, verifyEmailOtp, sendSmsOtp, verifySmsOtp };

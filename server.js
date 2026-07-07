@@ -69,8 +69,26 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Cloud-persistent SQLite: restore from Supabase on a fresh host, keep the
+// cloud mirror fresh while running, and flush on shutdown. The engine and
+// every query are unchanged — only the file's lifecycle is cloud-backed.
+const backup = require('./scripts/backup');
+const MIRROR_EVERY_MS = 5 * 60 * 1000;   // live cloud snapshot every 5 minutes
+let shuttingDown = false;
+
+async function gracefulExit(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} — flushing DB to cloud…`);
+  try { await backup.mirrorLive(); } catch (e) { console.error('[shutdown] mirror failed:', e.message); }
+  process.exit(0);
+}
+
 // Initialize DB then start server
 async function start() {
+  // 1) Fresh/ephemeral host with no local DB? Pull the latest cloud snapshot.
+  await backup.restoreOnBoot();
+
   const { getDb } = require('./database');
   await getDb();
   console.log('Database initialized');
@@ -78,6 +96,18 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`Souq marketplace running on http://localhost:${PORT}`);
   });
+
+  // 2) Keep a fresh full snapshot in the cloud while running.
+  const supa = require('./services/supabase');
+  if (supa.configured()) {
+    setInterval(() => { backup.mirrorLive().catch(() => {}); }, MIRROR_EVERY_MS).unref();
+    await backup.mirrorLive().catch(() => {});   // initial mirror right after boot
+    console.log('[cloud] live mirror active (every 5 min + on shutdown)');
+  }
+
+  // 3) Flush to cloud on graceful stop (PM2 restart, host redeploy, Ctrl+C).
+  process.on('SIGTERM', () => gracefulExit('SIGTERM'));
+  process.on('SIGINT', () => gracefulExit('SIGINT'));
 }
 
 start().catch(err => {
