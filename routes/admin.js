@@ -236,6 +236,25 @@ router.delete('/codes/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/codes/verify', async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const { code, user } = req.body;
+    if (!code) return res.status(400).json({ error: 'Code required' });
+
+    const matches = dbs.allSync(
+      'SELECT * FROM codes WHERE code = ? AND role = ? AND used = 0 ORDER BY id DESC',
+      [code, 'merchant']
+    );
+    const match = matches.find(m => !m.user || m.user === user || m.user === '');
+    if (!match) return res.status(400).json({ error: 'Incorrect or already-used code' });
+
+    dbs.runSync('UPDATE codes SET used = 1 WHERE id = ?', [match.id]);
+    dbs.saveDb();
+    res.json({ ok: true, code: match.code });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/reset', async (req, res) => {
   try {
     const dbs = await getDb();

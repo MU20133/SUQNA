@@ -2,6 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const multer = require('multer');
+const path = require('path');
 const { sendOtp } = require('../services/whatsapp');
 
 const router = express.Router();
@@ -278,6 +280,45 @@ router.put('/password', async (req, res) => {
     runSync('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?', [hash, salt, user.id]);
     saveDb();
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Store image upload (logo/cover)
+const storeImg = multer({
+  storage: multer.diskStorage({
+    destination: path.join(__dirname, '..', 'uploads'),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, 'store_' + uuidv4() + ext);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(path.extname(file.originalname))) return cb(null, true);
+    cb(new Error('Only images allowed'));
+  }
+});
+
+router.post('/store-image', storeImg.single('image'), async (req, res) => {
+  try {
+    const sessionId = req.headers['x-session-id'];
+    if (!sessionId) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { getSync, runSync, saveDb } = await getDb();
+    const session = getSync('SELECT * FROM sessions WHERE id = ? AND expires > ?', [sessionId, Date.now()]);
+    if (!session) return res.status(401).json({ error: 'Session expired' });
+
+    const { kind } = req.body;
+    if (!kind || !['logo', 'cover'].includes(kind)) return res.status(400).json({ error: 'kind must be logo or cover' });
+
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+
+    const url = '/uploads/' + req.file.filename;
+    if (kind === 'logo') runSync('UPDATE users SET store_logo = ? WHERE id = ?', [url, session.user_id]);
+    else runSync('UPDATE users SET store_cover = ? WHERE id = ?', [url, session.user_id]);
+    saveDb();
+
+    res.json({ url });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

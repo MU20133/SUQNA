@@ -210,6 +210,19 @@
   .chat-in{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);}
   .chat-in input{flex:1;border:1px solid var(--line);border-radius:20px;padding:9px 14px;background:var(--paper);color:var(--ink);}
   .chat-in button{border:none;background:var(--teal);color:#fff;border-radius:20px;padding:0 16px;font-weight:600;}
+  /* Advertising Hall ticker */
+  .ticker{position:relative;overflow:hidden;background:var(--hdr);color:var(--hdr-ink);border-radius:12px;margin-bottom:12px;display:flex;align-items:center;min-height:44px;}
+  .ticker .tk-ico{flex-shrink:0;width:40px;text-align:center;font-size:16px;z-index:2;background:var(--hdr);}
+  .ticker .tk-win{flex:1;overflow:hidden;direction:ltr;}
+  .ticker .tk-track{display:inline-block;white-space:nowrap;padding-left:100%;will-change:transform;animation:tk-slide var(--tk-dur,18s) linear infinite;font-size:14px;font-weight:500;}
+  .ticker .tk-track .w{display:inline-block;animation:tk-word 2.2s ease-in-out infinite;}
+  .ticker .tk-track .sep{opacity:.5;margin:0 14px;}
+  @keyframes tk-slide{from{transform:translateX(0);}to{transform:translateX(-100%);}}
+  @keyframes tk-word{0%,100%{opacity:.75;}50%{opacity:1;text-shadow:0 0 12px rgba(140,204,252,.8);}}
+  @media (prefers-reduced-motion: reduce){
+    .ticker .tk-track{animation:none;padding-left:0;white-space:normal;}
+    .ticker .tk-track .w{animation:none;}
+  }
   /* map */
   #mapbox{position:relative;height:420px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
   #mapgrid{position:absolute;inset:0;background:repeating-linear-gradient(0deg,var(--line) 0 .5px,transparent .5px 38px),repeating-linear-gradient(90deg,var(--line) 0 .5px,transparent .5px 38px);opacity:.45;}
@@ -497,9 +510,9 @@ async function load(){
       }
     } catch(e) {}
 
-    // Load ads from API
+    // Load ads from API (with city filter)
     try {
-      const result = await api('GET', '/ads');
+      const result = await api('GET', '/ads?city=' + encodeURIComponent(state.city) + '&limit=100');
       if (result && result.ads) {
         state.ads = result.ads;
       }
@@ -511,9 +524,9 @@ async function load(){
       state.promos = promos || [];
     } catch(e) {}
 
-    // Load fees from admin settings if admin
+    // Load fees from public settings endpoint
     try {
-      const settings = await api('GET', '/admin/settings');
+      const settings = await api('GET', '/settings/fees');
       if (settings) {
         state.fees = {};
         const feeKeys = ['ad_publishing','featured','ad_appearance','highlight','mark_new','merchant_opening','commission_percent'];
@@ -523,23 +536,16 @@ async function load(){
       }
     } catch(e) {}
 
-    // Load engagements
-    try {
-      const savedResult = await api('GET', '/ads?saved=1');
-      state.engage = {};
-      if (savedResult && savedResult.ads) {
-        for (const a of savedResult.ads) {
-          if (a.saved) {
-            state.engage[a.id] = state.engage[a.id] || {};
-            state.engage[a.id].saved = true;
-          }
-        }
-      }
-    } catch(e) {}
+    // Build engagements from the ads which include liked/saved per user
+    state.engage = {};
+    for (const a of state.ads) {
+      if (a.saved) { state.engage[a.id] = state.engage[a.id] || {}; state.engage[a.id].saved = true; }
+      if (a.liked) { state.engage[a.id] = state.engage[a.id] || {}; state.engage[a.id].liked = true; }
+    }
   } catch(e) {}
 
-  // Seed ads fallback
-  if (state.ads.length === 0) {
+  // Seed ads fallback if API returned nothing
+  if (!state.ads || state.ads.length === 0) {
     state.ads = [...SEED_ADS];
   }
 
@@ -623,9 +629,21 @@ function visibleAds(){
     .sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
 }
 
+function tickerHTML(){
+  const ps = state.promos || [];
+  if (!ps.length) return '';
+  const words = txt => txt.split(/\s+/).map((w, i) => `<span class="w" style="animation-delay:${(i*0.18).toFixed(2)}s">${w}</span>`).join(' ');
+  const body = ps.map(p => words(p.text)).join('<span class="sep">✦</span>');
+  const dur = Math.max(14, Math.min(60, ps.reduce((n, p) => n + p.text.length, 0) * 0.55));
+  return `<div class="ticker" role="marquee">
+    <span class="tk-ico">📣</span>
+    <div class="tk-win"><div class="tk-track" style="--tk-dur:${dur}s">${body}</div></div>
+  </div>`;
+}
 function feedHTML(){
   const ads=visibleAds();
-  return `
+  const promos = tickerHTML();
+  return `${promos}
   <div class="searchrow"><input id="q" placeholder="${t('search')} ${state.city}…" value="${state.q}"></div>
   <div class="cats">${CATEGORIES.map(c=>`<button class="cat ${c===state.cat?'active':''}" data-cat="${c}">${catLabel(c)}</button>`).join('')}</div>
   ${ads.length? ads.map(cardHTML).join('') : `<div class="empty">${t('noAds')} ${state.city}.<br>${t('tapPlus')}</div>`}`;
@@ -639,8 +657,15 @@ function savedHTML(){
 function cardHTML(a){
   const e=state.engage[a.id]||{};
   const likes=a.likes+(e.liked?1:0);
-  const imgAtt=(a.attachments||[]).find(f=>f.kind==='image');
-  const mediaInner = imgAtt ? `<img src="${imgAtt.dataUrl}" style="width:100%;height:100%;object-fit:cover">` : (CAT_ICON[a.cat]||"🏷️");
+  // Construct first photo URL from comma-separated filenames (GROUP_CONCAT)
+  let mediaInner = CAT_ICON[a.cat]||"🏷️";
+  if (a.photos) {
+    const firstPhoto = a.photos.split(',')[0];
+    if (firstPhoto) mediaInner = `<img src="/uploads/${firstPhoto}" style="width:100%;height:100%;object-fit:cover">`;
+  } else if (a.attachments && a.attachments.length) {
+    const imgAtt = a.attachments.find(f => f.kind === 'image');
+    if (imgAtt) mediaInner = `<img src="${imgAtt.dataUrl || '/uploads/'+imgAtt.file_path}" style="width:100%;height:100%;object-fit:cover">`;
+  }
   return `
   <div class="card">
     <div class="media">${mediaInner}
@@ -1172,14 +1197,17 @@ function codeSheet(){
 async function confirmMerchant(){
   const entered=val('f_code');
   if (!entered) { toast('Enter the code'); return; }
-  // In the API version, the code is validated server-side (conceptually).
-  // For now we treat any code entry as successful since demo codes are auto-generated.
-  state.user.pending = false;
-  state.user.store = state.user.store || {logo:'', cover:'', bio:''};
-  state.convs = state.convs || seedConvs(state.user.name);
-  closeSheet();
-  toast(state.lang==='ar'?'تم تفعيل حساب التاجر · مرحباً بك في متجرك':'Merchant account activated · welcome to your store');
-  state.screen='store'; route();
+  try {
+    await api('POST', '/admin/codes/verify', { code: entered, user: state.user.name });
+    state.user.pending = false;
+    state.user.store = state.user.store || {logo:'', cover:'', bio:''};
+    state.convs = state.convs || seedConvs(state.user.name);
+    closeSheet();
+    toast(state.lang==='ar'?'تم تفعيل حساب التاجر · مرحباً بك في متجرك':'Merchant account activated · welcome to your store');
+    state.screen='store'; route();
+  } catch(ex) {
+    toast(ex.message);
+  }
 }
 // demo buyer conversations for a new merchant store
 function seedConvs(merchant){
@@ -1246,9 +1274,9 @@ async function adminLogin(){
     if (result.user && result.user.role === 'admin') {
       saveSession(result.sessionId);
       state.user = result.user;
-      state.adminMfaPending = false;
-      state.adminAuthed = true;
-      toast(state.lang==='ar'?'مرحباً أيها المشرف':'Welcome, admin');
+      state._adminMfaCode = String(Math.floor(100000 + Math.random() * 900000));
+      state.adminMfaPending = true;
+      state.adminAuthed = false;
       route();
     } else {
       toast(t('wrongLogin'));
@@ -1510,7 +1538,7 @@ function randomSalt(){
   const arr=new Uint8Array(16); crypto.getRandomValues(arr);
   return Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-// Enforce a strong password: 8+ chars and at least 3 of the 4 character classes.
+// Password strength: server requires 8+ chars. Client shows meter but only enforces min length.
 function passwordStrength(pw){
   pw=pw||'';
   const hasLower=/[a-z]/.test(pw);
@@ -1518,11 +1546,11 @@ function passwordStrength(pw){
   const hasDigit=/[0-9]/.test(pw);
   const hasSymbol=/[^A-Za-z0-9]/.test(pw);
   const classes=[hasLower,hasUpper,hasDigit,hasSymbol].filter(Boolean).length;
-  const lenOk=pw.length>=8 && pw.length<=12;
-  const allFour=hasLower&&hasUpper&&hasDigit&&hasSymbol;
-  const ok=lenOk && allFour;
+  const lenOk=pw.length>=8;
+  const ok=lenOk;
   let level='weak';
-  if(ok) level = pw.length>=11 ? 'strong' : 'medium';
+  if(lenOk && classes>=3) level = 'medium';
+  if(lenOk && classes===4 && pw.length>=12) level = 'strong';
   return {level, ok, classes, longEnough:lenOk};
 }
 function renderPwMeter(inputId, meterId){
@@ -1744,7 +1772,11 @@ function renderStore(s){
 }
 async function renderOwnPageBody(s){
   const u = state.user;
-  u.store = u.store || {logo:'',cover:'',bio:''};
+  // Normalize store fields from API (store_logo -> store.logo)
+  u.store = u.store || {};
+  if (u.store_logo && !u.store.logo) u.store.logo = u.store_logo;
+  if (u.store_cover && !u.store.cover) u.store.cover = u.store_cover;
+  if (u.store_bio && !u.store.bio) u.store.bio = u.store_bio;
   state.convs = state.convs || [];
 
   // Fetch merchant's ads and conversations from API
@@ -1840,11 +1872,20 @@ function renderStoreBody(){
   }
 }
 function unreadCount(){return (state.convs||[]).filter(c=>c.unread).length;}
-function pickStoreImg(kind){
-  // file input -> data URL
-  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-  inp.onchange=()=>{const f=inp.files[0]; if(!f)return; const r=new FileReader();
-    r.onload=()=>{state.user.store[kind]=r.result; save(); route();}; r.readAsDataURL(f);};
+async function pickStoreImg(kind){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    const fd = new FormData();
+    fd.append('image', f);
+    fd.append('kind', kind);
+    try {
+      const result = await api('POST', '/auth/store-image', fd);
+      state.user.store = state.user.store || {};
+      state.user.store[kind] = result.url;
+      save(); route();
+    } catch(ex) { toast('Upload failed: ' + ex.message); }
+  };
   inp.click();
 }
 async function saveBio(){
