@@ -4,6 +4,7 @@
 // Uses SQLite's online-backup API (safe while the server is running — WAL
 // readers/writers are not blocked). Keeps the newest KEEP copies, prunes older.
 
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
