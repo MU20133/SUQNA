@@ -109,11 +109,32 @@ router.post('/otp/request', async (req, res) => {
       VALUES (?, ?, ?, 'register', ?, ?)`, [contact, type, hashOtp(code, contact), Date.now() + OTP_TTL_MS, Date.now()]);
     saveDb();
 
-    // WhatsApp API -> message to WhatsApp; email -> Supabase Auth mailer.
+    // Phone channel: Meta WhatsApp first, else Supabase SMS (needs an SMS
+    // provider connected in the Supabase dashboard), else dev fallback.
+    // Email channel: Supabase Auth mailer.
     let dev = true;
     if (type === 'wa') {
-      const r = await sendOtp(contact, code, lang || 'en');
-      dev = r.dev;
+      if ((process.env.WHATSAPP_PROVIDER || 'none') === 'meta') {
+        const r = await sendOtp(contact, code, lang || 'en');
+        dev = r.dev;
+      } else {
+        const supa = require('../services/supabase');
+        if (supa.configured()) {
+          try {
+            await supa.sendSmsOtp(contact);
+            runSync('UPDATE otps SET code_hash = ? WHERE contact = ? AND used = 0', ['supabase-sms', contact]);
+            saveDb();
+            dev = false;
+          } catch (e) {
+            console.log('[sms] supabase phone provider not ready, dev fallback:', e.message);
+            const r = await sendOtp(contact, code, lang || 'en');   // dev logger
+            dev = r.dev;
+          }
+        } else {
+          const r = await sendOtp(contact, code, lang || 'en');
+          dev = r.dev;
+        }
+      }
     } else {
       const supa = require('../services/supabase');
       if (supa.configured()) {
@@ -147,9 +168,11 @@ router.post('/otp/verify', async (req, res) => {
     if (row.expires < Date.now()) return res.status(400).json({ error: 'Code expired. Request a new one.' });
     if (row.attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ error: 'Too many wrong attempts. Request a new code.' });
 
-    if (row.code_hash === 'supabase') {
+    if (row.code_hash === 'supabase' || row.code_hash === 'supabase-sms') {
       const supa = require('../services/supabase');
-      const ok = await supa.verifyEmailOtp(contact, String(code));
+      const ok = row.code_hash === 'supabase-sms'
+        ? await supa.verifySmsOtp(contact, String(code))
+        : await supa.verifyEmailOtp(contact, String(code));
       if (!ok) {
         runSync('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [row.id]); saveDb();
         return res.status(400).json({ error: 'Incorrect code' });

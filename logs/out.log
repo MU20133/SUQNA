@@ -28,3 +28,12 @@
 2026-07-07 11:40:41: Database initialized
 2026-07-07 11:40:41: Souq marketplace running on http://localhost:3000
 2026-07-07 11:40:42: [whatsapp:dev] to=+249700000009 :: Your Souq verification code: 338511 | Valid for 5 minutes. Do not share it.
+2026-07-07 12:14:40: Database initialized
+2026-07-07 12:14:40: Souq marketplace running on http://localhost:3000
+2026-07-07 12:14:41: [whatsapp:dev] to=+249700000015 :: Your Souq verification code: 236907 | Valid for 5 minutes. Do not share it.
+2026-07-07 12:26:22: Database initialized
+2026-07-07 12:26:22: Souq marketplace running on http://localhost:3000
+2026-07-07 12:37:13: Database initialized
+2026-07-07 12:37:13: Souq marketplace running on http://localhost:3000
+2026-07-07 12:37:15: [sms] supabase phone provider not ready, dev fallback: sms otp failed: Unsupported phone provider
+2026-07-07 12:37:15: [whatsapp:dev] to=+249700000021 :: Your Souq verification code: 236573 | Valid for 5 minutes. Do not share it.

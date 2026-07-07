@@ -85,6 +85,37 @@ async function verifyEmailOtp(email, token) {
   return res.ok;
 }
 
+// --- SMS OTP via Supabase Auth ---
+// Works once an SMS provider (Twilio/Vonage/MessageBird) is connected in the
+// Supabase dashboard (Authentication -> Providers -> Phone). Until then the
+// endpoint errors and callers fall back to dev mode.
+function e164(phone) {
+  const d = String(phone).replace(/[\s\-()]/g, '');
+  return d.startsWith('00') ? '+' + d.slice(2) : d;
+}
+
+async function sendSmsOtp(phone) {
+  const res = await fetch(`${URL_()}/auth/v1/otp`, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ phone: e164(phone), create_user: true })
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(`sms otp failed: ${json.msg || json.error_description || res.status}`);
+  }
+  return true;
+}
+
+async function verifySmsOtp(phone, token) {
+  const res = await fetch(`${URL_()}/auth/v1/verify`, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ type: 'sms', phone: e164(phone), token })
+  });
+  return res.ok;
+}
+
 async function listBackups(bucket = 'backups') {
   const res = await fetch(`${URL_()}/storage/v1/object/list/${bucket}`, {
     method: 'POST',
@@ -96,4 +127,4 @@ async function listBackups(bucket = 'backups') {
   return json;
 }
 
-module.exports = { configured, ensureBucket, uploadBackup, listBackups, uploadObject, sendEmailOtp, verifyEmailOtp };
+module.exports = { configured, ensureBucket, uploadBackup, listBackups, uploadObject, sendEmailOtp, verifyEmailOtp, sendSmsOtp, verifySmsOtp };
