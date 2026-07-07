@@ -1,0 +1,38 @@
+# Render Blueprint — free always-on-ish hosting for Souq.
+# Deploy: push this repo to GitHub -> Render.com -> New -> Blueprint -> pick repo.
+# Then set the secret env vars (marked sync:false) in the Render dashboard.
+#
+# Data persistence: Render's free disk is ephemeral, but the app restores its
+# database from Supabase on boot and mirrors back every 5 min + on shutdown
+# (see scripts/backup.js), so data survives restarts/redeploys.
+services:
+  - type: web
+    name: souq
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/promos
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # --- secrets: set these in the Render dashboard (Environment tab) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: OTP_PEPPER
+        sync: false
+      - key: INFOBIP_BASE_URL
+        sync: false
+      - key: INFOBIP_API_KEY
+        sync: false
+      - key: INFOBIP_SMS_FROM
+        value: Souq
+      # WhatsApp/phone provider: 'infobip' once the Infobip account is active,
+      # otherwise leave unset for on-screen dev codes.
+      - key: WHATSAPP_PROVIDER
+        sync: false

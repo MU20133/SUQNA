@@ -2,7 +2,7 @@
   "name": "souq-local",
   "version": "2.0.0",
   "private": true,
-  "description": "Souq · خفض لى — Production marketplace backend",
+  "description": "Souq \u00b7 \u062e\u0641\u0636 \u0644\u0649 \u2014 Production marketplace backend",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
@@ -18,5 +18,8 @@
     "multer": "^1.4.5-lts.1",
     "sql.js": "^1.11.0",
     "uuid": "^11.0.5"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
