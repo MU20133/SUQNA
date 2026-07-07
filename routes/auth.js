@@ -121,7 +121,7 @@ router.post('/otp/request', async (req, res) => {
         const supa = require('../services/supabase');
         if (supa.configured()) {
           try {
-            await supa.sendSmsOtp(contact);
+            await supa.sendSmsOtp(contact, process.env.OTP_PHONE_CHANNEL || 'whatsapp');
             runSync('UPDATE otps SET code_hash = ? WHERE contact = ? AND used = 0', ['supabase-sms', contact]);
             saveDb();
             dev = false;

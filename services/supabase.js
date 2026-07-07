@@ -94,15 +94,18 @@ function e164(phone) {
   return d.startsWith('00') ? '+' + d.slice(2) : d;
 }
 
-async function sendSmsOtp(phone) {
+// channel: 'whatsapp' delivers the code as a WhatsApp message (requires the
+// Twilio provider in the Supabase dashboard with WhatsApp enabled); 'sms'
+// delivers a plain text message. Verification is identical for both.
+async function sendSmsOtp(phone, channel = 'sms') {
   const res = await fetch(`${URL_()}/auth/v1/otp`, {
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ phone: e164(phone), create_user: true })
+    body: JSON.stringify({ phone: e164(phone), create_user: true, channel })
   });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(`sms otp failed: ${json.msg || json.error_description || res.status}`);
+    throw new Error(`phone otp (${channel}) failed: ${json.msg || json.error_description || res.status}`);
   }
   return true;
 }
