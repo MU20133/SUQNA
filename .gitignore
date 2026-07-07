@@ -5,3 +5,5 @@ uploads/*
 logs/
 .env
 cloudflared.exe
+backups/
+souq.db.pre-migration.bak

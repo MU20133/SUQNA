@@ -1,77 +1,77 @@
-const initSqlJs = require('sql.js');
+// Storage engine: better-sqlite3 (native SQLite, WAL mode).
+//
+// Replaces sql.js (WASM), which kept the whole DB in memory and rewrote the
+// ENTIRE file on every saveDb() — slow as data grows and corruptible if the
+// process died mid-write. better-sqlite3 writes only changed pages, WAL keeps
+// readers and the writer from blocking each other, and a crash can lose at
+// most the last transaction — never the file.
+//
+// The exported interface is unchanged (getSync/runSync/allSync/lastId/saveDb),
+// so every route works as before. saveDb() is now a no-op kept for
+// compatibility: durability is handled by SQLite itself.
+
+const Database = require('better-sqlite3');
 const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
 const DB_PATH = path.join(__dirname, 'souq.db');
 let db = null;
-let SQL = null;
+let _lastId = 0;
 
-function prepareSync(sql, params) {
-  const stmt = db.prepare(sql);
-  if (params) stmt.bind(params);
-  return stmt;
+// better-sqlite3 rejects undefined/boolean bind values — normalize them.
+function clean(params) {
+  if (!params) return params;
+  return params.map(v => v === undefined ? null : v === true ? 1 : v === false ? 0 : v);
 }
 
 function runSync(sql, params) {
   if (params) {
-    db.run(sql, params);
+    const info = db.prepare(sql).run(clean(params));
+    _lastId = Number(info.lastInsertRowid) || _lastId;
   } else {
-    db.run(sql);
+    db.exec(sql);
   }
 }
 
 function allSync(sql, params) {
   const stmt = db.prepare(sql);
-  if (params) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+  return params ? stmt.all(clean(params)) : stmt.all();
 }
 
 function getSync(sql, params) {
   const stmt = db.prepare(sql);
-  if (params) stmt.bind(params);
-  if (stmt.step()) {
-    const row = stmt.getAsObject();
-    stmt.free();
-    return row;
-  }
-  stmt.free();
-  return null;
+  const row = params ? stmt.get(clean(params)) : stmt.get();
+  return row === undefined ? null : row;
+}
+
+function prepareSync(sql, params) {
+  const stmt = db.prepare(sql);
+  if (params) stmt.bind(clean(params));
+  return stmt;
 }
 
 function lastId() {
-  return db.exec("SELECT last_insert_rowid()")[0]?.values[0][0];
+  return _lastId;
 }
 
-function saveDb() {
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_PATH, buffer);
-}
+// No-op: with WAL every committed statement is already durable on disk.
+function saveDb() {}
 
 async function getDb() {
   if (db) return { db, prepareSync, runSync, allSync, getSync, lastId, saveDb, exec: (sql) => db.exec(sql) };
 
-  SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
-  }
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');     // fast, crash-safe concurrent access
+  db.pragma('synchronous = NORMAL');   // fsync at critical moments (WAL-safe)
+  db.pragma('foreign_keys = ON');
 
   migrate();
   seed();
-  saveDb();
   return { db, prepareSync, runSync, allSync, getSync, lastId, saveDb, exec: (sql) => db.exec(sql) };
 }
 
 function migrate() {
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -91,9 +91,7 @@ function migrate() {
       store_logo TEXT DEFAULT '',
       store_cover TEXT DEFAULT '',
       store_bio TEXT DEFAULT ''
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS ads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -116,17 +114,13 @@ function migrate() {
       likes INTEGER DEFAULT 0,
       conf_code TEXT,
       receipt_note TEXT DEFAULT ''
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS ad_photos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ad_id INTEGER NOT NULL,
       filename TEXT NOT NULL,
       FOREIGN KEY (ad_id) REFERENCES ads(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS ad_attachments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ad_id INTEGER NOT NULL,
@@ -134,15 +128,11 @@ function migrate() {
       name TEXT NOT NULL,
       file_path TEXT NOT NULL,
       FOREIGN KEY (ad_id) REFERENCES ads(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS promos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       text TEXT NOT NULL
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS codes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL,
@@ -151,9 +141,7 @@ function migrate() {
       used INTEGER DEFAULT 0,
       ad_id INTEGER,
       auto INTEGER DEFAULT 0
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS inquiries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ad_id INTEGER NOT NULL,
@@ -161,58 +149,44 @@ function migrate() {
       seller TEXT DEFAULT '',
       buyer TEXT DEFAULT '',
       FOREIGN KEY (ad_id) REFERENCES ads(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS inquiry_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       inquiry_id INTEGER NOT NULL,
       from_text TEXT NOT NULL,
       body TEXT NOT NULL,
       FOREIGN KEY (inquiry_id) REFERENCES inquiries(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       buyer TEXT NOT NULL,
       seller TEXT NOT NULL,
       ad_title TEXT DEFAULT '',
       unread INTEGER DEFAULT 1
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS conversation_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       conv_id INTEGER NOT NULL,
       from_text TEXT NOT NULL,
       body TEXT NOT NULL,
       FOREIGN KEY (conv_id) REFERENCES conversations(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS revenue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       amount INTEGER NOT NULL,
       type TEXT NOT NULL,
       date INTEGER NOT NULL
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
       expires INTEGER NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS admin_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS otps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       contact TEXT NOT NULL,
@@ -224,9 +198,7 @@ function migrate() {
       used INTEGER DEFAULT 0,
       verify_token TEXT,
       created INTEGER NOT NULL
-    )
-  `);
-  db.run(`
+    );
     CREATE TABLE IF NOT EXISTS user_engagements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -235,7 +207,21 @@ function migrate() {
       saved INTEGER DEFAULT 0,
       session_id TEXT,
       FOREIGN KEY (ad_id) REFERENCES ads(id) ON DELETE CASCADE
-    )
+    );
+
+    -- Recall-speed indexes: cover the hot lookups (feed filters, owner pages,
+    -- session auth on every request, OTP throttling, engagement joins).
+    CREATE INDEX IF NOT EXISTS ix_ads_status_created ON ads(status, created DESC);
+    CREATE INDEX IF NOT EXISTS ix_ads_seller ON ads(seller);
+    CREATE INDEX IF NOT EXISTS ix_ads_cat ON ads(cat);
+    CREATE INDEX IF NOT EXISTS ix_ads_city ON ads(city);
+    CREATE INDEX IF NOT EXISTS ix_sessions_expires ON sessions(expires);
+    CREATE INDEX IF NOT EXISTS ix_otps_contact_created ON otps(contact, created);
+    CREATE INDEX IF NOT EXISTS ix_engage_user_ad ON user_engagements(user_id, ad_id);
+    CREATE INDEX IF NOT EXISTS ix_photos_ad ON ad_photos(ad_id);
+    CREATE INDEX IF NOT EXISTS ix_inquiries_people ON inquiries(seller, buyer);
+    CREATE INDEX IF NOT EXISTS ix_users_wa ON users(wa);
+    CREATE INDEX IF NOT EXISTS ix_users_email ON users(email);
   `);
 }
 
