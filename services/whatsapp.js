@@ -97,12 +97,76 @@ async function sendViaTwilioSms(to, body) {
   return json;
 }
 
+// --- Infobip (SMS + WhatsApp) — strong coverage in Sudan / Africa / MENA ---
+// INFOBIP_BASE_URL  e.g. https://xxxxx.api.infobip.com  (shown on your Infobip
+//                   dashboard home / API key page)
+// INFOBIP_API_KEY   the API key (Authorization: App <key>)
+// INFOBIP_SMS_FROM  sender id/number for SMS (e.g. "Souq" or a number)
+// INFOBIP_WA_FROM   your Infobip WhatsApp sender number (digits only)
+function infobipBase() {
+  const b = (process.env.INFOBIP_BASE_URL || '').replace(/\/$/, '');
+  if (!b) throw new Error('INFOBIP_BASE_URL not set');
+  return b.startsWith('http') ? b : 'https://' + b;
+}
+function infobipHeaders() {
+  const key = process.env.INFOBIP_API_KEY;
+  if (!key) throw new Error('INFOBIP_API_KEY not set');
+  return { 'Authorization': `App ${key}`, 'Content-Type': 'application/json', 'Accept': 'application/json' };
+}
+const digitsOnly = (to) => to.replace(/^\+/, '').replace(/^00/, '');
+
+async function sendViaInfobipSms(to, body) {
+  const from = process.env.INFOBIP_SMS_FROM || 'Souq';
+  const res = await fetch(`${infobipBase()}/sms/2/text/advanced`, {
+    method: 'POST',
+    headers: infobipHeaders(),
+    body: JSON.stringify({ messages: [{ destinations: [{ to: digitsOnly(to) }], from, text: body }] })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.requestError?.serviceException?.text || `Infobip SMS error ${res.status}`);
+  return json;
+}
+
+async function sendViaInfobipWa(to, body) {
+  const from = process.env.INFOBIP_WA_FROM;
+  if (!from) throw new Error('INFOBIP_WA_FROM not set (no WhatsApp sender)');
+  const res = await fetch(`${infobipBase()}/whatsapp/1/message/text`, {
+    method: 'POST',
+    headers: infobipHeaders(),
+    body: JSON.stringify({ from: digitsOnly(from), to: digitsOnly(to), content: { text: body } })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.requestError?.serviceException?.text || `Infobip WhatsApp error ${res.status}`);
+  return json;
+}
+
 async function sendOtp(to, code, lang) {
   const body = lang === 'ar'
     ? `رمز التحقق الخاص بك في خفض لى: ${code}\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
     : `Your Souq verification code: ${code}\nValid for 5 minutes. Do not share it.`;
 
   const provider = process.env.WHATSAPP_PROVIDER || 'none';
+
+  if (provider === 'infobip') {
+    // Verification plan: SMS first; if not possible for any reason, WhatsApp;
+    // last resort dev mode so testing never breaks.
+    try {
+      await sendViaInfobipSms(to, body);
+      console.log(`[otp] delivered by Infobip SMS to ${to}`);
+      return { sent: true, dev: false };
+    } catch (smsErr) {
+      console.log('[otp] Infobip SMS not possible (' + smsErr.message + ') -> trying WhatsApp');
+      try {
+        await sendViaInfobipWa(to, body);
+        console.log(`[otp] delivered by Infobip WhatsApp to ${to}`);
+        return { sent: true, dev: false };
+      } catch (waErr) {
+        console.error('[otp] Infobip WhatsApp also failed (' + waErr.message + ') -> dev fallback');
+        console.log(`[whatsapp:dev] to=${to} :: ${body.replace(/\n/g, ' | ')}`);
+        return { sent: true, dev: true };
+      }
+    }
+  }
 
   if (provider === 'meta') {
     await sendViaMeta(to, body);

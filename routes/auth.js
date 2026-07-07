@@ -114,7 +114,7 @@ router.post('/otp/request', async (req, res) => {
     // Email channel: Supabase Auth mailer.
     let dev = true;
     if (type === 'wa') {
-      if (['meta', 'twilio'].includes(process.env.WHATSAPP_PROVIDER || 'none')) {
+      if (['meta', 'twilio', 'infobip'].includes(process.env.WHATSAPP_PROVIDER || 'none')) {
         const r = await sendOtp(contact, code, lang || 'en');
         dev = r.dev;
       } else {

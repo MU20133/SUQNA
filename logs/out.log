@@ -41,3 +41,21 @@
 2026-07-07 12:40:37: Souq marketplace running on http://localhost:3000
 2026-07-07 12:40:42: [sms] supabase phone provider not ready, dev fallback: phone otp (whatsapp) failed: Unsupported phone provider
 2026-07-07 12:40:42: [whatsapp:dev] to=+249700000031 :: Your Souq verification code: 511998 | Valid for 5 minutes. Do not share it.
+2026-07-07 14:18:53: Database initialized
+2026-07-07 14:18:53: Souq marketplace running on http://localhost:3000
+2026-07-07 14:19:02: Database initialized
+2026-07-07 14:19:02: Souq marketplace running on http://localhost:3000
+2026-07-07 14:19:09: [sms] supabase phone provider not ready, dev fallback: phone otp (whatsapp) failed: Unsupported phone provider
+2026-07-07 14:19:09: [whatsapp:dev] to=+249700000041 :: Your Souq verification code: 844895 | Valid for 5 minutes. Do not share it.
+2026-07-07 14:23:24: [sms] supabase phone provider not ready, dev fallback: phone otp (whatsapp) failed: Unsupported phone provider
+2026-07-07 14:23:24: [whatsapp:dev] to=+249993302555 :: Your Souq verification code: 177733 | Valid for 5 minutes. Do not share it.
+2026-07-07 14:40:57: Database initialized
+2026-07-07 14:40:57: Souq marketplace running on http://localhost:3000
+2026-07-07 14:41:02: [otp] SMS not possible (TWILIO_SMS_FROM not set (no SMS sender number)) -> trying WhatsApp
+2026-07-07 14:41:02: [otp] delivered by WhatsApp to +249993302555
+2026-07-07 18:14:40: Database initialized
+2026-07-07 18:14:40: Souq marketplace running on http://localhost:3000
+2026-07-07 18:14:52: Database initialized
+2026-07-07 18:14:52: Souq marketplace running on http://localhost:3000
+2026-07-07 18:14:57: [otp] Infobip SMS not possible (INFOBIP_BASE_URL not set) -> trying WhatsApp
+2026-07-07 18:14:57: [whatsapp:dev] to=+249993302555 :: Your Souq verification code: 447320 | Valid for 5 minutes. Do not share it.
