@@ -24,5 +24,20 @@ const KEEP = 14;
 
   const old = fs.readdirSync(DIR).filter(f => f.startsWith('souq-') && f.endsWith('.db')).sort().reverse().slice(KEEP);
   for (const f of old) { fs.unlinkSync(path.join(DIR, f)); console.log(`[backup] pruned ${f}`); }
+
+  // Off-site copy: push the same backup to Supabase cloud storage, so data
+  // survives even if this machine's disk is lost.
+  const supa = require('../services/supabase');
+  if (supa.configured()) {
+    try {
+      await supa.ensureBucket('backups');
+      await supa.uploadBackup(dest, path.basename(dest));
+      console.log(`[backup] uploaded to Supabase: backups/${path.basename(dest)}`);
+    } catch (e) {
+      console.error('[backup] Supabase upload failed:', e.message);
+    }
+  } else {
+    console.log('[backup] Supabase not configured (SUPABASE_KEY missing) — local backup only');
+  }
   process.exit(0);
 })().catch(e => { console.error('[backup] FAILED:', e.message); process.exit(1); });
