@@ -81,6 +81,10 @@ function upgradeColumns() {
   add('users', 'age_confirmed_at', 'age_confirmed_at INTEGER');
   add('users', 'id_proof_file', "id_proof_file TEXT DEFAULT ''");
   add('ads', 'receipt_file', "receipt_file TEXT DEFAULT ''");
+  add('users', 'permissions', "permissions TEXT DEFAULT ''");
+  add('users', 'id_verified', 'id_verified INTEGER DEFAULT 0');
+  // Promote the built-in admin to super_admin (comprehensive powers).
+  db.exec("UPDATE users SET role='super_admin' WHERE name='admin' AND role='admin'");
 }
 
 function migrate() {
@@ -101,6 +105,8 @@ function migrate() {
       failed_attempts INTEGER DEFAULT 0,
       lock_until INTEGER,
       contact_verified TEXT DEFAULT '',
+      permissions TEXT DEFAULT '',
+      id_verified INTEGER DEFAULT 0,
       age_confirmed INTEGER DEFAULT 0,
       age_confirmed_at INTEGER,
       id_proof_file TEXT DEFAULT '',
@@ -216,6 +222,18 @@ function migrate() {
       verify_token TEXT,
       created INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT DEFAULT 'support',
+      subject TEXT DEFAULT '',
+      body TEXT DEFAULT '',
+      from_user TEXT DEFAULT '',
+      about_user TEXT DEFAULT '',
+      ad_id INTEGER,
+      status TEXT DEFAULT 'open',
+      admin_note TEXT DEFAULT '',
+      created INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS user_engagements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -259,13 +277,13 @@ function seed() {
     }
   }
 
-  const admin = getSync('SELECT id, password_hash FROM users WHERE name = ? AND role = ?', ['admin', 'admin']);
+  const admin = getSync("SELECT id, password_hash FROM users WHERE name = 'admin' AND role IN ('admin','super_admin')");
   const adminPw = process.env.ADMIN_PASSWORD || 'admin123';
   if (!admin) {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(adminPw, salt);
     runSync(`INSERT INTO users (name, role, password_hash, salt, joined, status)
-      VALUES (?, ?, ?, ?, ?, ?)`, ['admin', 'admin', hash, salt, Date.now(), 'active']);
+      VALUES (?, ?, ?, ?, ?, ?)`, ['admin', 'super_admin', hash, salt, Date.now(), 'active']);
   } else if (!bcrypt.compareSync(adminPw, admin.password_hash)) {
     // .env is the source of truth: sync the admin password on every startup
     // so editing ADMIN_PASSWORD + restart is all it takes to change it.

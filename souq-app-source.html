@@ -333,10 +333,25 @@ const I18N = {
     promoTitle:"Advertising Hall · promotional content", promoHint:"Pin promotional banners shown at the top of the public feed.",
     addPromo:"Add promo banner", promoText:"Banner text", from:"From", to:"To", remove:"Remove",
     genCode:"Generate code", codeFor:"Category / role", sendCode:"Send to user", activeCodes:"Active codes",
-    noUsers:"No registered users yet.", noCodes:"No codes generated yet.", noPromo:"No promotions yet."
+    noUsers:"No registered users yet.", noCodes:"No codes generated yet.", noPromo:"No promotions yet.",
+    // admin roles & permissions
+    super_addicted:"super_admin", addicted:"admin",
+    admins:"Admins", manageAdmins:"Manage admins", createAdmin:"Create admin", editAdmin:"Edit admin", deleteAdmin:"Delete admin",
+    role:"Role", permissions:"Permissions", perm_user_management:"User management",
+    perm_ad_management:"Advertising management", perm_subscription_payment:"Subscriptions & payments",
+    perm_verification_security:"Verification & security", perm_content_settings:"Content & settings",
+    perm_reports_stats:"Reports & statistics", perm_support_disputes:"Support & disputes",
+    superLabel:"super_admin — full access to all admin functions",
+    addictedLabel:"admin — limited to assigned permissions",
+    // support tab
+    support:"Support", supportTickets:"Support tickets", noTickets:"No support tickets yet.",
+    ticketFrom:"From", ticketAbout:"About", ticketStatus:"Status", ticketOpen:"Open", ticketClosed:"Closed",
+    ticketResponse:"Response", respondTicket:"Respond", closeTicket:"Close ticket",
+    userReports:"User reports", complaints:"Complaints",
+    superAddictedPw:"Super Addicted password"
   },
   ar:{
-    feed:"الرئيسية", map:"الخريطة", saved:"المحفوظة", admin:"الإدارة", account:"حسابي",
+    feed:"الرئيسية", map:"الخريطة", saved:"المحفوظة", admin:"admin", account:"حسابي",
     guest:"زائر", search:"ابحث في إعلانات", noAds:"لا توجد إعلانات في", tapPlus:"اضغط + لنشر أول إعلان.",
     negotiable:"قابل للتفاوض", call:"اتصال", whatsapp:"واتساب", like:"إعجاب", save:"حفظ",
     featured:"مميّز", active:"نشط", savedAds:"الإعلانات المحفوظة", nothingSaved:"لا يوجد محفوظات بعد.",
@@ -377,6 +392,19 @@ const I18N = {
     addPromo:"إضافة لافتة ترويجية", promoText:"نص اللافتة", from:"من", to:"إلى", remove:"حذف",
     genCode:"توليد رمز", codeFor:"الفئة / الدور", sendCode:"إرسال للمستخدم", activeCodes:"الرموز الفعّالة",
     noUsers:"لا يوجد مستخدمون مسجّلون بعد.", noCodes:"لم يتم توليد رموز بعد.", noPromo:"لا توجد عروض ترويجية بعد.",
+    super_addicted:"ادمن خارق", addicted:"ادمن",
+    admins:"المشرفون", manageAdmins:"إدارة المشرفين", createAdmin:"إنشاء مشرف", editAdmin:"تعديل مشرف", deleteAdmin:"حذف مشرف",
+    role:"الدور", permissions:"الصلاحيات", perm_user_management:"إدارة المستخدمين",
+    perm_ad_management:"إدارة الإعلانات", perm_subscription_payment:"الاشتراكات والمدفوعات",
+    perm_verification_security:"التحقق والأمان", perm_content_settings:"المحتوى والإعدادات",
+    perm_reports_stats:"التقارير والإحصائيات", perm_support_disputes:"الدعم والنزاعات",
+    superLabel:"ادمن خارق — وصول كامل لجميع وظائف الإدارة",
+    addictedLabel:"ادمن — محدود بالصلاحيات الممنوحة",
+    support:"الدعم", supportTickets:"تذاكر الدعم", noTickets:"لا توجد تذاكر دعم بعد.",
+    ticketFrom:"من", ticketAbout:"حول", ticketStatus:"الحالة", ticketOpen:"مفتوح", ticketClosed:"مغلق",
+    ticketResponse:"الرد", respondTicket:"رد", closeTicket:"إغلاق التذكرة",
+    userReports:"بلاغات المستخدمين", complaints:"شكاوى",
+    superAddictedPw:"كلمة مرور المدمن الخارق",
     adsUnit:"الإعلانات", stats:"التحليلات", createAd:"إنشاء إعلان", allAds:"جميع الإعلانات", noAllAds:"لا توجد إعلانات بعد.",
     edit:"تعديل", delete:"حذف", unfeature:"إلغاء التمييز", feature:"تمييز", publish:"نشر", unpublish:"إلغاء النشر",
     confirmDelete:"حذف هذا الإعلان نهائياً؟", adCreated:"تم إنشاء الإعلان ونشره", adUpdated:"تم تحديث الإعلان", adDeleted:"تم حذف الإعلان",
@@ -460,7 +488,8 @@ const SEED_ADS = [
 
 //// ---------- state ----------
 let state = {user:null, city:"Khartoum", cat:"All", q:"", screen:"feed",
-             ads:[], engage:{}, draft:null, lang:"en", theme:"light", adminAuthed:false};
+             ads:[], engage:{}, draft:null, lang:"en", theme:"light", adminAuthed:false,
+             adminUsers:null, supportTickets:[], _currentAdmin:null};
 const KEY="souqna_app_v1";
 
 async function load(){
@@ -472,7 +501,8 @@ async function load(){
       state.user=s.user||null; state.city=s.city||"Khartoum"; state.ads=s.ads||[]; state.engage=s.engage||{};
       state.lang=s.lang||"en"; state.theme=s.theme||"light"; state.convs=s.convs||null; state.fees=s.fees||null;
       state.users=s.users||[]; state.promos=s.promos||[]; state.codes=s.codes||[]; state.inquiries=s.inquiries||[];
-      state.adminSecurity=s.adminSecurity||{failedAttempts:0,lockUntil:null};}}
+      state.adminSecurity=s.adminSecurity||{failedAttempts:0,lockUntil:null};
+      state.adminUsers=s.adminUsers||null; state.supportTickets=s.supportTickets||[];}}
   catch(e){}
   // SECURITY: whether the admin room is currently *unlocked* is never
   // restored from storage — every fresh load starts locked and the MFA
@@ -488,7 +518,7 @@ async function load(){
 }
 async function save(){try{
   const payload=JSON.stringify(
-  {user:state.user,city:state.city,ads:state.ads,engage:state.engage,lang:state.lang,theme:state.theme,convs:state.convs,fees:state.fees,users:state.users,promos:state.promos,codes:state.codes,inquiries:state.inquiries,adminSecurity:state.adminSecurity});
+  {user:state.user,city:state.city,ads:state.ads,engage:state.engage,lang:state.lang,theme:state.theme,convs:state.convs,fees:state.fees,users:state.users,promos:state.promos,codes:state.codes,inquiries:state.inquiries,adminSecurity:state.adminSecurity,adminUsers:state.adminUsers,supportTickets:state.supportTickets});
   if(window.storage&&window.storage.set) await window.storage.set(KEY,payload);
   else localStorage.setItem(KEY,payload);   // fallback for localhost / plain hosting
 }catch(e){}}
@@ -1133,14 +1163,16 @@ function renderAdmin(s){
      <button class="ghostmini" style="margin-${state.lang==='ar'?'right':'left'}:auto" onclick="adminLogout()">${t('logoutAdmin')}</button>
    </div>
    <div class="admin-tabs" style="flex-wrap:wrap">
-     <button class="${adminTab==='review'?'sel':''}" onclick="setAdminTab('review')">${t('adReview')}</button>
-     <button class="${adminTab==='cash'?'sel':''}" onclick="setAdminTab('cash')">${t('cashProofs')}</button>
-     <button class="${adminTab==='adsUnit'?'sel':''}" onclick="setAdminTab('adsUnit')">${t('adsUnit')}</button>
-     <button class="${adminTab==='users'?'sel':''}" onclick="setAdminTab('users')">${t('users')}</button>
-     <button class="${adminTab==='fees'?'sel':''}" onclick="setAdminTab('fees')">${t('fees')}</button>
-     <button class="${adminTab==='hall'?'sel':''}" onclick="setAdminTab('hall')">${t('content')}</button>
-     <button class="${adminTab==='codes'?'sel':''}" onclick="setAdminTab('codes')">${t('codes')}</button>
-     <button class="${adminTab==='stats'?'sel':''}" onclick="setAdminTab('stats')">${t('stats')}</button>
+     ${hasPerm('ad_management')?`<button class="${adminTab==='review'?'sel':''}" onclick="setAdminTab('review')">${t('adReview')}</button>`:''}
+     ${hasPerm('subscription_payment')?`<button class="${adminTab==='cash'?'sel':''}" onclick="setAdminTab('cash')">${t('cashProofs')}</button>`:''}
+     ${hasPerm('ad_management')?`<button class="${adminTab==='adsUnit'?'sel':''}" onclick="setAdminTab('adsUnit')">${t('adsUnit')}</button>`:''}
+     ${hasPerm('user_management')?`<button class="${adminTab==='users'?'sel':''}" onclick="setAdminTab('users')">${t('users')}</button>`:''}
+     ${hasPerm('subscription_payment')?`<button class="${adminTab==='fees'?'sel':''}" onclick="setAdminTab('fees')">${t('fees')}</button>`:''}
+     ${hasPerm('content_settings')?`<button class="${adminTab==='hall'?'sel':''}" onclick="setAdminTab('hall')">${t('content')}</button>`:''}
+     ${hasPerm('verification_security')?`<button class="${adminTab==='codes'?'sel':''}" onclick="setAdminTab('codes')">${t('codes')}</button>`:''}
+     ${hasPerm('reports_stats')?`<button class="${adminTab==='stats'?'sel':''}" onclick="setAdminTab('stats')">${t('stats')}</button>`:''}
+     ${hasPerm('support_disputes')?`<button class="${adminTab==='support'?'sel':''}" onclick="setAdminTab('support')">${t('support')}</button>`:''}
+     ${state._currentAdmin && state._currentAdmin.role==='super_addicted'?`<button class="${adminTab==='admins'?'sel':''}" onclick="setAdminTab('admins')">${t('admins')}</button>`:''}
    </div>
    <div id="adminBody"></div>`;
   renderAdminBody();
@@ -1160,29 +1192,34 @@ function adminLoginHTML(){
     <h2 style="font-family:Sora;font-size:19px;margin:8px 0 4px;">${t('adminLogin')}</h2>
     <p class="lead" style="margin-bottom:18px">${t('adminLocked')}</p>
     <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('username')}</label><input id="adm_u" placeholder="${t('username')}"></div>
-    <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('password')}</label><input id="adm_p" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <div class="field" style="text-align:${state.lang==='ar'?'right':'left'}"><label>${t('superAddictedPw')}</label><input id="adm_p" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')adminLogin()"></div>
     <button class="btn" onclick="adminLogin()">${t('login')}</button>
     ${sec.failedAttempts?`<p class="lead" style="margin-top:14px;font-size:11.5px;color:var(--amber)">${sec.failedAttempts}/5 ${t('attemptsLeft')}</p>`:''}
   </div>`;
 }
 // Step 1: username/password. Step 2 (below): a second-factor code — this is
 // the MFA requirement for anyone entering the admin/supervisor control room.
-function adminLogin(){
+async function adminLogin(){
   const sec=state.adminSecurity=state.adminSecurity||{failedAttempts:0,lockUntil:null};
   if(sec.lockUntil && sec.lockUntil>Date.now()){ route(); return; }
   const u=val('adm_u'), p=val('adm_p');
-  if(u==='admin' && p==='admin123'){
-    sec.failedAttempts=0; sec.lockUntil=null; save();
-    state._adminMfaCode=String(Math.floor(100000+Math.random()*900000));
-    state.adminMfaPending=true;
-    route();
-  } else {
-    sec.failedAttempts=(sec.failedAttempts||0)+1;
-    if(sec.failedAttempts>=5){ sec.lockUntil=Date.now()+60000; sec.failedAttempts=0; }
-    save();
-    toast(t('wrongLogin'));
-    route();
+  const au = (state.adminUsers||[]).find(a => a.username === u);
+  if(au){
+    const hash = await hashPassword(p, au.salt);
+    if(hash === au.passHash){
+      sec.failedAttempts=0; sec.lockUntil=null; save();
+      state._currentAdmin = au;
+      state._adminMfaCode=String(Math.floor(100000+Math.random()*900000));
+      state.adminMfaPending=true;
+      route();
+      return;
+    }
   }
+  sec.failedAttempts=(sec.failedAttempts||0)+1;
+  if(sec.failedAttempts>=5){ sec.lockUntil=Date.now()+60000; sec.failedAttempts=0; }
+  save();
+  toast(t('wrongLogin'));
+  route();
 }
 function adminMfaHTML(){
   return `<div style="max-width:340px;margin:30px auto 0;text-align:center;">
@@ -1198,11 +1235,143 @@ function adminMfaHTML(){
 function adminMfaVerify(){
   if(val('adm_mfa')!==state._adminMfaCode){ toast(t('wrongCode')); return; }
   state.adminMfaPending=false; state.adminAuthed=true;
-  toast(state.lang==='ar'?'مرحباً أيها المشرف':'Welcome, admin');
+  const roleLabel = state._currentAdmin && state._currentAdmin.role==='super_addicted' ? t('super_addicted') : t('addicted');
+  toast(state.lang==='ar'?'مرحباً أيها '+roleLabel:'Welcome, '+roleLabel);
   route();
 }
-function adminLogout(){ state.adminAuthed=false; toast(state.lang==='ar'?'تم تسجيل خروج المشرف':'Admin logged out'); route(); }
+function adminLogout(){ state.adminAuthed=false; state._currentAdmin=null; toast(state.lang==='ar'?'تم تسجيل خروج المشرف':'Admin logged out'); route(); }
 function setAdminTab(t){adminTab=t;renderAdminBody();}
+// ---- permission helper ----
+const DEFAULT_ADMIN_PERMS = {
+  user_management: false, ad_management: false, subscription_payment: false,
+  verification_security: false, content_settings: false, reports_stats: false, support_disputes: false
+};
+function hasPerm(perm){
+  if(!state._currentAdmin) return false;
+  if(state._currentAdmin.role==='super_addicted') return true;
+  return state._currentAdmin.permissions && state._currentAdmin.permissions[perm];
+}
+// ---- admin management (super_addicted only) ----
+let editingAdminIdx=null;
+function renderAdmins(b){
+  const ar=state.lang==='ar';
+  const list=state.adminUsers||[];
+  let form='';
+  if(editingAdminIdx===-1||editingAdminIdx!==null){
+    const editing = editingAdminIdx===-1 ? {username:'',role:'addicted',permissions:{...DEFAULT_ADMIN_PERMS}} : list[editingAdminIdx];
+    const isNew = editingAdminIdx===-1;
+    if(isNew) editing.permissions={...DEFAULT_ADMIN_PERMS};
+    const permChecks=Object.keys(DEFAULT_ADMIN_PERMS).map(pk=>`
+      <label class="chkrow" style="margin:4px 0"><input type="checkbox" id="adm_perm_${pk}" ${editing.permissions[pk]?'checked':''}>
+      <span>${t('perm_'+pk)}</span></label>`).join('');
+    form=`
+      <div class="review" style="border-color:var(--teal)">
+        <div class="rtitle">${isNew?t('createAdmin'):t('editAdmin')}</div>
+        <div class="field"><label>${t('username')}</label><input id="adm_edit_user" value="${editing.username}" ${isNew?'':'readonly'}></div>
+        <div class="field"><label>${t('superAddictedPw')}</label><input id="adm_edit_pw" type="password" placeholder="${isNew?'':'—— leave blank to keep'}"></div>
+        <div class="field"><label>${t('role')}</label>
+          <select id="adm_edit_role" onchange="document.getElementById('admPermsArea').style.display=this.value==='addicted'?'block':'none'">
+            <option value="super_addicted" ${editing.role==='super_addicted'?'selected':''}>${t('super_addicted')} — ${t('superLabel')}</option>
+            <option value="addicted" ${editing.role==='addicted'?'selected':''}>${t('addicted')} — ${t('addictedLabel')}</option>
+          </select></div>
+        <div id="admPermsArea" style="${editing.role==='addicted'?'':'display:none'}">
+          <label style="font-size:12.5px;color:var(--sand);font-weight:500">${t('permissions')}</label>
+          ${permChecks}
+        </div>
+        <button class="btn" style="margin-top:8px" onclick="saveAdmin(${isNew?'-1':editingAdminIdx})">${isNew?t('createAdmin'):t('saveEdit')}</button>
+        <button class="btn sec" onclick="editingAdminIdx=null;renderAdminBody();">${t('cancelEdit')}</button>
+      </div>`;
+  }
+  const rows = list.length? list.map((a,i)=>`
+    <div class="review">
+      <div class="rtitle">${a.username} <span style="font-weight:400;color:var(--sand);font-size:12px">· ${t(a.role)}</span></div>
+      <div class="rbtns" style="flex-wrap:wrap">
+        ${a.role==='addicted'?`<span style="font-size:11.5px;color:var(--muted);margin-right:8px">${Object.entries(a.permissions||{}).filter(([,v])=>v).map(([k])=>t('perm_'+k)).join(', ')}</span>`:''}
+        <button class="ghostmini" onclick="editingAdminIdx=${i};renderAdminBody();">${t('editAdmin')}</button>
+        <button class="rb-no" style="flex:0 0 auto;padding:8px 14px" onclick="deleteAdmin(${i})">${t('deleteAdmin')}</button>
+      </div>
+    </div>`).join('') : `<div class="empty">No admins yet.</div>`;
+  b.innerHTML = (editingAdminIdx===null?`<button class="post-page-btn" onclick="editingAdminIdx=-1;renderAdminBody();">＋ ${t('createAdmin')}</button>`:'')+rows+form;
+}
+async function saveAdmin(idx){
+  const isNew = idx===-1;
+  const username = val('adm_edit_user');
+  if(!username){toast(state.lang==='ar'?'أدخل اسم المستخدم':'Enter username');return;}
+  const pw = val('adm_edit_pw');
+  if(isNew && !pw){toast(state.lang==='ar'?'أدخل كلمة المرور':'Enter password');return;}
+  const role = val('adm_edit_role')||'addicted';
+  const permissions = {...DEFAULT_ADMIN_PERMS};
+  if(role==='addicted'){
+    Object.keys(permissions).forEach(pk=>{
+      const el=document.getElementById('adm_perm_'+pk);
+      if(el) permissions[pk]=el.checked;
+    });
+  }
+  if(isNew){
+    if((state.adminUsers||[]).find(a=>a.username===username)){toast(ar?'اسم المستخدم موجود':'Username taken');return;}
+    const salt=randomSalt();
+    const passHash=await hashPassword(pw, salt);
+    state.adminUsers=state.adminUsers||[];
+    state.adminUsers.push({username,passHash,salt,role,permissions,created:Date.now()});
+  } else {
+    const a=state.adminUsers[idx];
+    if(!a)return;
+    a.role=role;
+    a.permissions=permissions;
+    if(pw){const salt=randomSalt(); a.passHash=await hashPassword(pw,salt); a.salt=salt;}
+  }
+  editingAdminIdx=null; save(); renderAdminBody();
+}
+function deleteAdmin(idx){
+  if(!confirm(state.lang==='ar'?'حذف هذا المشرف نهائياً؟':'Delete this admin permanently?'))return;
+  state.adminUsers.splice(idx,1);
+  editingAdminIdx=null; save(); renderAdminBody();
+}
+// ---- support / disputes tab ----
+function renderSupport(b){
+  const tickets=state.supportTickets||[];
+  // also show product inquiries as support items
+  const inquiries=state.inquiries||[];
+  b.innerHTML=`
+    <div class="review"><div class="rtitle">📬 ${t('supportTickets')}</div>
+      <div class="field" style="margin:10px 0 0"><label>${t('userReports')}</label>
+        <input id="sp_name" placeholder="${state.lang==='ar'?'اسم المبلّغ':'Reporter name'}"></div>
+      <div class="field"><label>${t('ticketAbout')}</label>
+        <input id="sp_about" placeholder="${state.lang==='ar'?'مشكلة أو استفسار':'Issue or inquiry'}"></div>
+      <div class="field"><label>${t('ticketResponse')}</label>
+        <textarea id="sp_body" rows="3" placeholder="${state.lang==='ar'?'وصف المشكلة بالتفصيل':'Describe the issue in detail'}"></textarea></div>
+      <button class="btn sec" onclick="createTicket()">${state.lang==='ar'?'إرسال التذكرة':'Submit ticket'}</button>
+    </div>
+    ${tickets.length? tickets.map((tk,i)=>`
+      <div class="review">
+        <div class="rtitle">#${tk.id} ${tk.about}</div>
+        <div class="meta">${t('ticketFrom')}: ${tk.reporter} · ${t('ticketStatus')}: <span style="color:${tk.closed?'var(--green)':'var(--amber)'}">${tk.closed?t('ticketClosed'):t('ticketOpen')}</span></div>
+        <div style="font-size:13px;margin:6px 0;padding:8px;background:var(--paper);border-radius:8px">${tk.body}</div>
+        ${tk.response?`<div style="font-size:12.5px;color:var(--sand);margin:4px 0;padding:6px 8px;background:var(--teal-l);border-radius:8px">🛡️ ${tk.response}</div>`:''}
+        ${!tk.closed?`<div class="rbtns"><input id="sp_resp_${i}" placeholder="${t('ticketResponse')}" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:9px">
+          <button class="rb-ok" onclick="respondTicket(${i})">${t('respondTicket')}</button>
+          <button class="rb-no" onclick="closeTicket(${i})">${t('closeTicket')}</button></div>`:''}
+      </div>`).join('') : `<div class="empty">${t('noTickets')}</div>`}
+    ${inquiries.length?`<div class="rtitle" style="margin:12px 0 8px">💬 ${t('complaints')} (${t('inquiry').toLowerCase()})</div>
+      ${inquiries.slice(0,5).map(q=>`<div class="review"><div class="rtitle">${q.adTitle}</div>
+        <div class="meta">${q.seller} · ${q.msgs.length} ${state.lang==='ar'?'رسالة':'msgs'}</div></div>`).join('')}`:''}`;
+}
+function createTicket(){
+  const reporter=val('sp_name'),about=val('sp_about'),body=val('sp_body');
+  if(!reporter||!body){toast(state.lang==='ar'?'أدخل اسم المبلّغ ووصف المشكلة':'Enter reporter and description');return;}
+  state.supportTickets=state.supportTickets||[];
+  state.supportTickets.unshift({id:(state.supportTickets.length+1),reporter,about:about||'—',body,closed:false,response:'',created:Date.now()});
+  save(); renderAdminBody();
+}
+function respondTicket(i){
+  const t=state.supportTickets[i]; if(!t)return;
+  const resp=val('sp_resp_'+i); if(!resp)return;
+  t.response=resp; save(); renderAdminBody();
+}
+function closeTicket(i){
+  const t=state.supportTickets[i]; if(!t)return;
+  t.closed=true; save(); renderAdminBody();
+}
 function renderAdminBody(){
   const b=document.getElementById('adminBody');
   if(adminTab==='review'){
@@ -1284,6 +1453,10 @@ function renderAdminBody(){
     renderAdsUnit(b);
   } else if(adminTab==='stats'){
     renderStats(b);
+  } else if(adminTab==='admins'){
+    renderAdmins(b);
+  } else if(adminTab==='support'){
+    renderSupport(b);
   }
 }
 function userAction(i,action){
@@ -1679,5 +1852,17 @@ document.getElementById('themeBtn').onclick=()=>{state.theme=state.theme==='dark
 document.getElementById('langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';save();applyChrome();route();};
 
 //// ---------- boot ----------
-(async()=>{await load();applyChrome();renderCitySel();route();})();
+(async()=>{await load();
+  // Seed default super_addicted admin if none exist
+  if(!state.adminUsers||!state.adminUsers.length){
+    const salt=randomSalt();
+    const passHash=await hashPassword('admin123', salt);
+    state.adminUsers=[{username:'admin', passHash, salt, role:'super_addicted', permissions:{...DEFAULT_ADMIN_PERMS}, created:Date.now()}];
+    await save();
+  }
+applyChrome();renderCitySel();route();})();
+
+
+
+
 </script>

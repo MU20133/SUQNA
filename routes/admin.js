@@ -1,4 +1,5 @@
 const express = require('express');
+const { requirePerm, requireSuperAdmin, hasPerm, PERMISSIONS } = require('../middleware/auth');
 const router = express.Router();
 
 let dbs = null;
@@ -19,7 +20,7 @@ async function requireAdmin(req, res, next) {
     const user = dbs.getSync('SELECT * FROM users WHERE id = ?', [session.user_id]);
     if (!user) return res.status(401).json({ error: 'User not found' });
     if (user.status !== 'active') return res.status(403).json({ error: 'Account not active' });
-    if (user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (user.role !== 'admin' && user.role !== 'super_admin') return res.status(403).json({ error: 'Admin only' });
 
     req.user = user;
     next();
@@ -28,7 +29,7 @@ async function requireAdmin(req, res, next) {
 
 router.use(requireAdmin);
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', requirePerm('reports'), async (req, res) => {
   try {
     const dbs = await getDb();
     const totalUsers = dbs.getSync('SELECT COUNT(*) as c FROM users').c;
@@ -42,7 +43,7 @@ router.get('/stats', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/users', async (req, res) => {
+router.get('/users', requirePerm('users'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { page = 1, limit = 50 } = req.query;
@@ -53,7 +54,7 @@ router.get('/users', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/users/:id/toggle', async (req, res) => {
+router.put('/users/:id/toggle', requirePerm('users'), async (req, res) => {
   try {
     const dbs = await getDb();
     const user = dbs.getSync('SELECT * FROM users WHERE id = ?', [req.params.id]);
@@ -67,7 +68,7 @@ router.put('/users/:id/toggle', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/users/:id/approve-merchant', async (req, res) => {
+router.put('/users/:id/approve-merchant', requirePerm('users'), async (req, res) => {
   try {
     const dbs = await getDb();
     const user = dbs.getSync('SELECT * FROM users WHERE id = ?', [req.params.id]);
@@ -80,7 +81,7 @@ router.put('/users/:id/approve-merchant', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/ads', async (req, res) => {
+router.get('/ads', requirePerm('ads'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { status, page = 1, limit = 50 } = req.query;
@@ -104,7 +105,7 @@ router.get('/ads', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/ads/:id/status', async (req, res) => {
+router.put('/ads/:id/status', requirePerm('ads'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { status } = req.body;
@@ -134,7 +135,7 @@ router.put('/ads/:id/status', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/ads/:id/feature', async (req, res) => {
+router.put('/ads/:id/feature', requirePerm('ads'), async (req, res) => {
   try {
     const dbs = await getDb();
     const ad = dbs.getSync('SELECT * FROM ads WHERE id = ?', [req.params.id]);
@@ -147,7 +148,7 @@ router.put('/ads/:id/feature', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/settings', async (req, res) => {
+router.get('/settings', requirePerm('content'), async (req, res) => {
   try {
     const dbs = await getDb();
     const rows = dbs.allSync('SELECT * FROM admin_settings');
@@ -157,7 +158,7 @@ router.get('/settings', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/settings', async (req, res) => {
+router.put('/settings', requirePerm('content'), async (req, res) => {
   try {
     const dbs = await getDb();
     const allowed = ['ad_publishing', 'featured', 'ad_appearance', 'highlight', 'mark_new', 'merchant_opening', 'commission_percent'];
@@ -171,7 +172,7 @@ router.put('/settings', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/promos', async (req, res) => {
+router.get('/promos', requirePerm('content'), async (req, res) => {
   try {
     const dbs = await getDb();
     const promos = dbs.allSync('SELECT * FROM promos');
@@ -179,7 +180,7 @@ router.get('/promos', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/promos', async (req, res) => {
+router.post('/promos', requirePerm('content'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { text } = req.body;
@@ -190,7 +191,7 @@ router.post('/promos', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/promos/:id', async (req, res) => {
+router.delete('/promos/:id', requirePerm('content'), async (req, res) => {
   try {
     const dbs = await getDb();
     dbs.runSync('DELETE FROM promos WHERE id = ?', [req.params.id]);
@@ -199,7 +200,7 @@ router.delete('/promos/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/revenue', async (req, res) => {
+router.get('/revenue', requirePerm('reports'), async (req, res) => {
   try {
     const dbs = await getDb();
     const rows = dbs.allSync('SELECT * FROM revenue ORDER BY date DESC LIMIT 200');
@@ -208,7 +209,7 @@ router.get('/revenue', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/codes', async (req, res) => {
+router.get('/codes', requirePerm('billing'), async (req, res) => {
   try {
     const dbs = await getDb();
     const codes = dbs.allSync('SELECT * FROM codes ORDER BY id DESC');
@@ -216,7 +217,7 @@ router.get('/codes', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/codes', async (req, res) => {
+router.post('/codes', requirePerm('billing'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { code, role } = req.body;
@@ -227,7 +228,7 @@ router.post('/codes', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/codes/:id', async (req, res) => {
+router.delete('/codes/:id', requirePerm('billing'), async (req, res) => {
   try {
     const dbs = await getDb();
     dbs.runSync('DELETE FROM codes WHERE id = ?', [req.params.id]);
@@ -236,7 +237,7 @@ router.delete('/codes/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/codes/verify', async (req, res) => {
+router.post('/codes/verify', requirePerm('billing'), async (req, res) => {
   try {
     const dbs = await getDb();
     const { code, user } = req.body;
@@ -255,7 +256,7 @@ router.post('/codes/verify', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/reset', async (req, res) => {
+router.post('/reset', requireSuperAdmin, async (req, res) => {
   try {
     const dbs = await getDb();
     const tables = ['user_engagements', 'conversation_messages', 'conversations', 'inquiry_messages', 'inquiries', 'ad_attachments', 'ad_photos', 'codes', 'revenue', 'promos', 'sessions', 'ads'];
@@ -265,4 +266,111 @@ router.post('/reset', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ---------- who am I (drives which tabs the UI shows) ----------
+router.get('/me', async (req, res) => {
+  let perms = [];
+  if (req.user.role === 'super_admin') perms = PERMISSIONS.slice();
+  else { try { perms = JSON.parse(req.user.permissions || '[]'); } catch { perms = []; } }
+  res.json({ name: req.user.name, role: req.user.role, permissions: perms });
+});
+
+// ---------- Team: super-admin manages sub-admins ----------
+const bcrypt = require('bcryptjs');
+
+function safeParse(v) { try { return JSON.parse(v || '[]'); } catch { return []; } }
+function cleanPerms(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(k => PERMISSIONS.includes(k));
+}
+
+router.get('/team', requireSuperAdmin, async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const rows = dbs.allSync("SELECT id, name, role, status, permissions, joined FROM users WHERE role IN ('admin','super_admin') ORDER BY id ASC");
+    res.json(rows.map(r => ({ ...r, permissions: safeParse(r.permissions) })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/team', requireSuperAdmin, async (req, res) => {
+  try {
+    const { name, password, permissions } = req.body;
+    if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
+    if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const perms = cleanPerms(permissions);
+    const dbs = await getDb();
+    if (dbs.getSync('SELECT id FROM users WHERE name = ?', [name])) return res.status(409).json({ error: 'Name already taken' });
+    const salt = bcrypt.genSaltSync(12);
+    const hash = bcrypt.hashSync(password, salt);
+    dbs.runSync("INSERT INTO users (name, role, password_hash, salt, joined, status, permissions, age_confirmed) VALUES (?, 'admin', ?, ?, ?, 'active', ?, 1)",
+      [name, hash, salt, Date.now(), JSON.stringify(perms)]);
+    res.status(201).json({ id: dbs.lastId(), name, role: 'admin', permissions: perms });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/team/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const target = dbs.getSync('SELECT * FROM users WHERE id = ?', [req.params.id]);
+    if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Sub-admin not found' });
+    const { permissions, status, password } = req.body;
+    if (permissions !== undefined) dbs.runSync('UPDATE users SET permissions = ? WHERE id = ?', [JSON.stringify(cleanPerms(permissions)), target.id]);
+    if (status && ['active', 'suspended'].includes(status)) dbs.runSync('UPDATE users SET status = ? WHERE id = ?', [status, target.id]);
+    if (password) {
+      if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      const salt = bcrypt.genSaltSync(12);
+      dbs.runSync('UPDATE users SET password_hash = ?, salt = ? WHERE id = ?', [bcrypt.hashSync(password, salt), salt, target.id]);
+    }
+    const u = dbs.getSync('SELECT id, name, role, status, permissions FROM users WHERE id = ?', [target.id]);
+    res.json({ ...u, permissions: safeParse(u.permissions) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/team/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const target = dbs.getSync('SELECT id, role FROM users WHERE id = ?', [req.params.id]);
+    if (!target || target.role !== 'admin') return res.status(404).json({ error: 'Sub-admin not found (super admins cannot be deleted here)' });
+    dbs.runSync('DELETE FROM sessions WHERE user_id = ?', [target.id]);
+    dbs.runSync('DELETE FROM users WHERE id = ?', [target.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Verification & security area ----------
+router.get('/verifications', requirePerm('verification'), async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const rows = dbs.allSync("SELECT id, name, role, wa, email, id_proof_file, id_verified FROM users WHERE id_proof_file != '' ORDER BY id_verified ASC, id DESC");
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.put('/verifications/:id', requirePerm('verification'), async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const approve = req.body.approve ? 1 : 0;
+    dbs.runSync('UPDATE users SET id_verified = ? WHERE id = ?', [approve, req.params.id]);
+    res.json({ ok: true, id_verified: approve });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------- Support & disputes area ----------
+router.get('/tickets', requirePerm('support'), async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const rows = dbs.allSync("SELECT * FROM tickets ORDER BY (status = 'open') DESC, id DESC LIMIT 200");
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.put('/tickets/:id', requirePerm('support'), async (req, res) => {
+  try {
+    const dbs = await getDb();
+    const { status, admin_note } = req.body;
+    if (status && ['open', 'closed'].includes(status)) dbs.runSync('UPDATE tickets SET status = ? WHERE id = ?', [status, req.params.id]);
+    if (admin_note !== undefined) dbs.runSync('UPDATE tickets SET admin_note = ? WHERE id = ?', [admin_note, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
 module.exports = router;
+

@@ -59,3 +59,14 @@
 2026-07-07 18:14:52: Souq marketplace running on http://localhost:3000
 2026-07-07 18:14:57: [otp] Infobip SMS not possible (INFOBIP_BASE_URL not set) -> trying WhatsApp
 2026-07-07 18:14:57: [whatsapp:dev] to=+249993302555 :: Your Souq verification code: 447320 | Valid for 5 minutes. Do not share it.
+2026-07-07 18:47:45: Database initialized
+2026-07-07 18:47:45: Souq marketplace running on http://localhost:3000
+2026-07-07 18:47:50: [otp] delivered by Infobip SMS to +249993302555
+2026-07-07 18:50:52: Database initialized
+2026-07-07 18:50:52: Souq marketplace running on http://localhost:3000
+2026-07-07 18:50:59: [sms] supabase phone provider not ready, dev fallback: phone otp (whatsapp) failed: Unsupported phone provider
+2026-07-07 18:50:59: [whatsapp:dev] to=+249700000099 :: Your Souq verification code: 250347 | Valid for 5 minutes. Do not share it.
+2026-07-07 23:14:31: Database initialized
+2026-07-07 23:14:31: Souq marketplace running on http://localhost:3000
+2026-07-07 23:14:42: Database initialized
+2026-07-07 23:14:42: Souq marketplace running on http://localhost:3000

@@ -1248,20 +1248,30 @@ let adminTab='review';
 function renderAdmin(s){
   if(state.adminMfaPending){ s.innerHTML=adminMfaHTML(); return; }
   if(!state.adminAuthed){ s.innerHTML=adminLoginHTML(); return; }
+  const isSuper = state.adminRole==='super_admin';
+  let TABS = [
+    {k:'review',  label:t('adReview'),   perm:'ads'},
+    {k:'cash',    label:t('cashProofs'), perm:'billing'},
+    {k:'adsUnit', label:t('adsUnit'),    perm:'ads'},
+    {k:'users',   label:t('users'),      perm:'users'},
+    {k:'verify',  label:L('التحقق','Verification'), perm:'verification'},
+    {k:'fees',    label:t('fees'),       perm:'content'},
+    {k:'hall',    label:t('content'),    perm:'content'},
+    {k:'codes',   label:t('codes'),      perm:'billing'},
+    {k:'support', label:L('الدعم','Support'), perm:'support'},
+    {k:'stats',   label:t('stats'),      perm:'reports'},
+  ].filter(x=>adminCan(x.perm));
+  if(isSuper) TABS.push({k:'team', label:L('الفريق','Team'), perm:null});
+  if(!TABS.some(x=>x.k===adminTab)) adminTab = TABS.length?TABS[0].k:'';
+  const title = isSuper ? L('لوحة المشرف الأعلى','Super Admin panel') : L('لوحة المشرف','Admin panel');
   s.innerHTML=`
    <div style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;">
-     <h2 style="font-family:Sora;font-size:18px;">${t('adminPanel')}</h2>
+     <h2 style="font-family:Sora;font-size:18px;">${title}</h2>
+     <span class="badge ${isSuper?'ok':''}" style="font-size:11px">${isSuper?L('صلاحيات كاملة','super admin'):(state.adminName||'')}</span>
      <button class="ghostmini" style="margin-${state.lang==='ar'?'right':'left'}:auto" onclick="adminLogout()">${t('logoutAdmin')}</button>
    </div>
    <div class="admin-tabs" style="flex-wrap:wrap">
-     <button class="${adminTab==='review'?'sel':''}" onclick="setAdminTab('review')">${t('adReview')}</button>
-     <button class="${adminTab==='cash'?'sel':''}" onclick="setAdminTab('cash')">${t('cashProofs')}</button>
-     <button class="${adminTab==='adsUnit'?'sel':''}" onclick="setAdminTab('adsUnit')">${t('adsUnit')}</button>
-     <button class="${adminTab==='users'?'sel':''}" onclick="setAdminTab('users')">${t('users')}</button>
-     <button class="${adminTab==='fees'?'sel':''}" onclick="setAdminTab('fees')">${t('fees')}</button>
-     <button class="${adminTab==='hall'?'sel':''}" onclick="setAdminTab('hall')">${t('content')}</button>
-     <button class="${adminTab==='codes'?'sel':''}" onclick="setAdminTab('codes')">${t('codes')}</button>
-     <button class="${adminTab==='stats'?'sel':''}" onclick="setAdminTab('stats')">${t('stats')}</button>
+     ${TABS.map(x=>`<button class="${adminTab===x.k?'sel':''}" onclick="setAdminTab('${x.k}')">${x.label}</button>`).join('')}
    </div>
    <div id="adminBody"></div>`;
   renderAdminBody();
@@ -1290,7 +1300,7 @@ async function adminLogin(){
   const u=val('adm_u'), p=val('adm_p');
   try {
     const result = await api('POST', '/auth/login', { name: u, password: p });
-    if (result.user && result.user.role === 'admin') {
+    if (result.user && (result.user.role === 'admin' || result.user.role === 'super_admin')) {
       saveSession(result.sessionId);
       state.user = result.user;
       state._adminMfaCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -1316,11 +1326,28 @@ function adminMfaHTML(){
     <button class="btn sec" onclick="state.adminMfaPending=false;route();">${t('cancelEdit')}</button>
   </div>`;
 }
-function adminMfaVerify(){
+async function adminMfaVerify(){
   state.adminMfaPending=false; state.adminAuthed=true;
+  // Load this admin's role + permission set (drives which tabs show).
+  try {
+    const me = await api('GET', '/admin/me');
+    state.adminRole = me.role; state.adminPerms = me.permissions || []; state.adminName = me.name;
+  } catch(ex) { state.adminRole = 'admin'; state.adminPerms = []; }
   toast(state.lang==='ar'?'مرحباً أيها المشرف':'Welcome, admin');
   route();
 }
+function L(ar,en){ return state.lang==='ar'?ar:en; }
+function adminCan(perm){ return state.adminRole==='super_admin' || (state.adminPerms||[]).includes(perm); }
+function permDefs(){ return [
+  ['users', L('إدارة المستخدمين','User management')],
+  ['ads', L('إدارة الإعلانات','Advertising management')],
+  ['billing', L('الاشتراكات والمدفوعات','Subscriptions & payments')],
+  ['verification', L('التحقق والأمان','Verification & security')],
+  ['content', L('المحتوى والإعدادات','Content & settings')],
+  ['reports', L('التقارير والإحصائيات','Reports & statistics')],
+  ['support', L('الدعم وحل النزاعات','Support & disputes')],
+]; }
+function permLabel(k){ const f=permDefs().find(x=>x[0]===k); return f?f[1]:k; }
 async function adminLogout(){
   try { await api('POST', '/auth/logout'); } catch(ex) {}
   saveSession(null);
@@ -1329,6 +1356,72 @@ async function adminLogout(){
   toast(state.lang==='ar'?'تم تسجيل خروج المشرف':'Admin logged out');
   route();
 }
+// ---- Team management (super admin) ----
+function teamHTML(){
+  const team = state._team || [];
+  const cards = team.map(m=>{
+    if(m.role==='super_admin')
+      return `<div class="review"><div class="rtitle">${m.name} <span class="badge ok">${L('المشرف الأعلى','Super Admin')}</span></div>
+        <div class="meta">${L('صلاحيات كاملة على كل الأقسام','Full permissions over every section')}</div></div>`;
+    const boxes = permDefs().map(([k,label])=>`<label class="chkrow"><input type="checkbox" class="tp_${m.id}" value="${k}" ${(m.permissions||[]).includes(k)?'checked':''}><span>${label}</span></label>`).join('');
+    return `<div class="review"><div class="rtitle">${m.name} ${m.status==='suspended'?'<span class="badge danger">'+L('موقوف','suspended')+'</span>':''}</div>
+      ${boxes}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="saveSubAdmin(${m.id})">${L('حفظ الصلاحيات','Save permissions')}</button>
+        <button class="btn sec" onclick="deleteSubAdmin(${m.id})">${L('حذف','Remove')}</button>
+      </div></div>`;
+  }).join('');
+  const newBoxes = permDefs().map(([k,label])=>`<label class="chkrow"><input type="checkbox" class="np" value="${k}"><span>${label}</span></label>`).join('');
+  return `<div class="review"><div class="rtitle">${L('إضافة مشرف فرعي','Add a sub-admin')}</div>
+    <div class="field"><label>${t('username')}</label><input id="na_name"></div>
+    <div class="field"><label>${t('password')}</label><input id="na_pw" type="password" placeholder="••••••"></div>
+    <div class="meta" style="margin:6px 0">${L('اختر الأقسام التي يديرها','Choose the sections they manage')}</div>${newBoxes}
+    <button class="btn" style="margin-top:10px" onclick="createSubAdmin()">${L('إنشاء المشرف','Create sub-admin')}</button></div>
+    <h3 style="font-family:Sora;font-size:15px;margin:16px 0 8px">${L('أعضاء الفريق','Team members')}</h3>${cards}`;
+}
+async function createSubAdmin(){
+  const name=val('na_name'), pw=val('na_pw');
+  const perms=[...document.querySelectorAll('.np:checked')].map(x=>x.value);
+  try{ await api('POST','/admin/team',{name,password:pw,permissions:perms});
+    toast(L('تم إنشاء المشرف','Sub-admin created')); state._team=await api('GET','/admin/team'); renderAdmin(document.getElementById('screen')); }
+  catch(ex){ toast(ex.message); }
+}
+async function saveSubAdmin(id){
+  const perms=[...document.querySelectorAll('.tp_'+id+':checked')].map(x=>x.value);
+  try{ await api('PUT','/admin/team/'+id,{permissions:perms});
+    toast(L('تم الحفظ','Saved')); state._team=await api('GET','/admin/team'); renderAdmin(document.getElementById('screen')); }
+  catch(ex){ toast(ex.message); }
+}
+async function deleteSubAdmin(id){
+  try{ await api('DELETE','/admin/team/'+id); state._team=await api('GET','/admin/team'); renderAdmin(document.getElementById('screen')); }
+  catch(ex){ toast(ex.message); }
+}
+// ---- Verification & security ----
+function verifyHTML(){
+  const v=state._verifs||[];
+  if(!v.length) return `<div class="empty">${L('لا توجد طلبات تحقق هوية','No identity verification requests')}</div>`;
+  return v.map(u=>`<div class="review">
+    <div class="rtitle">${u.name} ${u.id_verified?'<span class="badge ok">✓ '+L('موثّق','verified')+'</span>':'<span class="badge warn">'+L('قيد المراجعة','pending')+'</span>'}</div>
+    <div class="meta">${u.role} · ${u.wa||u.email||''}</div>
+    <div style="margin-top:6px"><a href="/uploads/${u.id_proof_file}" target="_blank">${L('عرض وثيقة الهوية','View identity document')}</a></div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn" onclick="setVerify(${u.id},true)">${L('اعتماد','Approve')}</button>
+      <button class="btn sec" onclick="setVerify(${u.id},false)">${L('رفض','Reject')}</button>
+    </div></div>`).join('');
+}
+async function setVerify(id,ok){ try{ await api('PUT','/admin/verifications/'+id,{approve:ok}); state._verifs=await api('GET','/admin/verifications'); renderAdminBody(); }catch(ex){toast(ex.message);} }
+// ---- Support & disputes ----
+function supportHTML(){
+  const tk=state._tickets||[];
+  if(!tk.length) return `<div class="empty">${L('لا توجد تذاكر أو بلاغات','No tickets or reports')}</div>`;
+  return tk.map(k=>`<div class="review">
+    <div class="rtitle">${(k.subject||k.kind)} ${k.status==='open'?'<span class="badge warn">'+L('مفتوحة','open')+'</span>':'<span class="badge ok">'+L('مغلقة','closed')+'</span>'}</div>
+    <div class="meta">${k.kind} · ${L('من','from')} ${k.from_user||'—'}${k.about_user?(' · '+L('بخصوص','about')+' '+k.about_user):''}</div>
+    ${k.body?`<div style="margin-top:6px">${k.body}</div>`:''}
+    ${k.status==='open'?`<button class="btn sec" style="margin-top:8px" onclick="closeTicket(${k.id})">${L('إغلاق التذكرة','Close ticket')}</button>`:''}
+  </div>`).join('');
+}
+async function closeTicket(id){ try{ await api('PUT','/admin/tickets/'+id,{status:'closed'}); state._tickets=await api('GET','/admin/tickets'); renderAdminBody(); }catch(ex){toast(ex.message);} }
 async function setAdminTab(t){
   adminTab = t;
   // Fetch tab-specific data from API
@@ -1357,12 +1450,21 @@ async function setAdminTab(t){
         const feeKeys = ['ad_publishing','featured','ad_appearance','highlight','mark_new','merchant_opening','commission_percent'];
         for (const k of feeKeys) if (settings[k] != null) state.fees[k] = +settings[k];
       }
+    } else if (t === 'team') {
+      state._team = await api('GET', '/admin/team');
+    } else if (t === 'verify') {
+      state._verifs = await api('GET', '/admin/verifications');
+    } else if (t === 'support') {
+      state._tickets = await api('GET', '/admin/tickets');
     }
-  } catch(ex) { /* silently fail - will use cached data */ }
+  } catch(ex) { toast(ex.message); }
   renderAdminBody();
 }
 function renderAdminBody(){
   const b=document.getElementById('adminBody');
+  if(adminTab==='team'){ b.innerHTML = teamHTML(); return; }
+  if(adminTab==='verify'){ b.innerHTML = verifyHTML(); return; }
+  if(adminTab==='support'){ b.innerHTML = supportHTML(); return; }
   if(adminTab==='review'){
     // content review only after payment is confirmed (cash receipts approved, or non-cash success)
     const pend=state.ads.filter(a=>a.status==='pending_review' && a.payStatus==='success');

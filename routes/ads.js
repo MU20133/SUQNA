@@ -329,7 +329,20 @@ router.post('/:id/save', async (req, res) => {
 });
 
 router.post('/:id/report', async (req, res) => {
-  res.json({ ok: true });
+  try {
+    const dbs = await getDb();
+    const sessionId = req.headers['x-session-id'];
+    let reporter = 'guest';
+    if (sessionId) {
+      const sess = dbs.getSync('SELECT * FROM sessions WHERE id = ? AND expires > ?', [sessionId, Date.now()]);
+      if (sess) { const u = dbs.getSync('SELECT name FROM users WHERE id = ?', [sess.user_id]); if (u) reporter = u.name; }
+    }
+    const ad = dbs.getSync('SELECT id, title, seller FROM ads WHERE id = ?', [req.params.id]);
+    dbs.runSync(`INSERT INTO tickets (kind, subject, body, from_user, about_user, ad_id, status, created)
+      VALUES ('report', ?, ?, ?, ?, ?, 'open', ?)`,
+      [ad ? ('Reported ad: ' + ad.title) : 'Reported ad', (req.body && req.body.reason) || '', reporter, ad ? ad.seller : '', req.params.id, Date.now()]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
