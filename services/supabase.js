@@ -9,7 +9,15 @@
 
 const fs = require('fs');
 
-const URL_ = () => (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+// Normalize whatever the user pasted into SUPABASE_URL: tolerate a missing
+// scheme ("host", "//host") or a trailing slash, always yield "https://host".
+const URL_ = () => {
+  let u = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  if (!u) return '';
+  if (u.startsWith('//')) u = 'https:' + u;
+  else if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+};
 const KEY = () => process.env.SUPABASE_KEY || '';
 
 function configured() {
