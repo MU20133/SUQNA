@@ -76,6 +76,27 @@ async function sendViaTwilio(to, body) {
   return json;
 }
 
+// Plain SMS via Twilio (From = your Twilio number in TWILIO_SMS_FROM).
+async function sendViaTwilioSms(to, body) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_SMS_FROM;
+  if (!sid || !token) throw new Error('Twilio credentials not set');
+  if (!from) throw new Error('TWILIO_SMS_FROM not set (no SMS sender number)');
+  const toE164 = to.startsWith('00') ? '+' + to.slice(2) : to;
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({ From: from, To: toE164, Body: body })
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || `Twilio SMS error ${res.status}`);
+  return json;
+}
+
 async function sendOtp(to, code, lang) {
   const body = lang === 'ar'
     ? `رمز التحقق الخاص بك في خفض لى: ${code}\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
@@ -88,14 +109,23 @@ async function sendOtp(to, code, lang) {
     return { sent: true, dev: false };
   }
   if (provider === 'twilio') {
+    // Verification plan: try SMS first; if SMS is not possible for any
+    // reason, fall back to a WhatsApp message; last resort dev mode.
     try {
-      await sendViaTwilio(to, body);
+      await sendViaTwilioSms(to, body);
+      console.log(`[otp] delivered by SMS to ${to}`);
       return { sent: true, dev: false };
-    } catch (e) {
-      // e.g. recipient hasn't joined the sandbox yet — keep testing usable
-      console.error('[whatsapp:twilio] send failed, dev fallback:', e.message);
-      console.log(`[whatsapp:dev] to=${to} :: ${body.replace(/\n/g, ' | ')}`);
-      return { sent: true, dev: true };
+    } catch (smsErr) {
+      console.log('[otp] SMS not possible (' + smsErr.message + ') -> trying WhatsApp');
+      try {
+        await sendViaTwilio(to, body);
+        console.log(`[otp] delivered by WhatsApp to ${to}`);
+        return { sent: true, dev: false };
+      } catch (waErr) {
+        console.error('[otp] WhatsApp also failed (' + waErr.message + ') -> dev fallback');
+        console.log(`[whatsapp:dev] to=${to} :: ${body.replace(/\n/g, ' | ')}`);
+        return { sent: true, dev: true };
+      }
     }
   }
 
