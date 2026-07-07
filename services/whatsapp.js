@@ -51,6 +51,31 @@ async function sendViaMeta(to, body) {
   throw lastErr;
 }
 
+// --- Twilio WhatsApp (works with the free sandbox for testing) ---
+// TWILIO_ACCOUNT_SID (AC...), TWILIO_AUTH_TOKEN, and optionally
+// TWILIO_WA_FROM (defaults to the sandbox sender whatsapp:+14155238886).
+// Sandbox note: each recipient joins once by WhatsApp-ing the join code
+// to the sandbox number; then they receive real OTPs.
+async function sendViaTwilio(to, body) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) throw new Error('TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set');
+  const from = process.env.TWILIO_WA_FROM || 'whatsapp:+14155238886';
+  const toE164 = to.startsWith('00') ? '+' + to.slice(2) : to;
+
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({ From: from, To: `whatsapp:${toE164}`, Body: body })
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || `Twilio error ${res.status}`);
+  return json;
+}
+
 async function sendOtp(to, code, lang) {
   const body = lang === 'ar'
     ? `رمز التحقق الخاص بك في خفض لى: ${code}\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
@@ -61,6 +86,17 @@ async function sendOtp(to, code, lang) {
   if (provider === 'meta') {
     await sendViaMeta(to, body);
     return { sent: true, dev: false };
+  }
+  if (provider === 'twilio') {
+    try {
+      await sendViaTwilio(to, body);
+      return { sent: true, dev: false };
+    } catch (e) {
+      // e.g. recipient hasn't joined the sandbox yet — keep testing usable
+      console.error('[whatsapp:twilio] send failed, dev fallback:', e.message);
+      console.log(`[whatsapp:dev] to=${to} :: ${body.replace(/\n/g, ' | ')}`);
+      return { sent: true, dev: true };
+    }
   }
 
   // dev mode: no gateway — log it; caller may expose dev_code to the client
