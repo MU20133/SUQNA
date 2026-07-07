@@ -13,7 +13,10 @@ const URL_ = () => (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const KEY = () => process.env.SUPABASE_KEY || '';
 
 function configured() {
-  return Boolean(URL_() && KEY() && KEY().startsWith('eyJ'));
+  // Accept both key generations: legacy JWT service_role (eyJ...) and the
+  // newer secret API keys (sb_secret_...).
+  const k = KEY();
+  return Boolean(URL_() && k && (k.startsWith('eyJ') || k.startsWith('sb_secret_')));
 }
 
 function headers(extra = {}) {
